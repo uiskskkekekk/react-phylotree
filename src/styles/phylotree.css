@@ -19,3 +19,17 @@ text.rp-label {
 path.rp-branch:hover {
   stroke-width: 10px;
 }
+
+.phylotree-application {
+  display: flex;
+  flex-direction: column;
+  align-items: left; /* Center align items horizontally */
+}
+
+.file-input-container {
+  margin: 10px; /* Adjust spacing as needed */
+}
+
+.button-group-container {
+  margin: 10px;
+}

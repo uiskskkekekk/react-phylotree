@@ -1,5 +1,5 @@
-const path = require("path"),
-  HtmlWebpackPlugin = require("html-webpack-plugin");
+const path = require("path");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
   entry: path.resolve("src", "app.jsx"),
@@ -13,9 +13,11 @@ module.exports = {
       {
         test: /\.jsx$/,
         exclude: /node_modules/,
-        loader: "babel-loader",
-        query: {
-          presets: ["@babel/react"]
+        use: {
+          loader: "babel-loader",
+          options: {
+            presets: ["@babel/react"]
+          }
         }
       },
       {
@@ -30,7 +32,9 @@ module.exports = {
     path: path.resolve(__dirname, "dist")
   },
   devServer: {
-    contentBase: path.resolve(__dirname, "dist"),
+    static: {
+      directory: path.resolve(__dirname, "dist")
+    },
     historyApiFallback: true
   }
 };

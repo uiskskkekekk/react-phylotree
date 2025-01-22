@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { phylotree } from "phylotree";
+import { max } from "d3-array";
+import { AxisTop } from "d3-react-axis";
 import { scaleLinear, scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
+import { phylotree } from "phylotree";
+import React, { useState } from "react";
 import _ from "underscore";
-import { AxisTop } from "d3-react-axis";
-import { max } from "d3-array";
 
 import Branch from "./branch.jsx";
 import text_width from "./text_width";
@@ -113,6 +113,7 @@ function getColorScale(tree, highlightBranches) {
 
 function Phylotree(props) {
   const [tooltip, setTooltip] = useState(false);
+  const [treeData, setTreeData] = useState(null);
   const { width, height, maxLabelWidth } = props;
   var{ tree, newick } = props;
   if (!tree && !newick) {
@@ -155,6 +156,41 @@ function Phylotree(props) {
       .domain([0, tree.max_y])
       .range([props.includeBLAxis ? 60 : 0, height]),
     color_scale = getColorScale(tree, props.highlightBranches);
+  
+  const handleMerge = (node, newName) => {
+    // 深拷貝當前樹
+    const newTree = _.cloneDeep(tree);
+    
+    // 查找目標節點
+    const targetNode = findNode(newTree, node.unique_id);
+    if (!targetNode) return;
+    
+    // 更新節點名稱
+    targetNode.data.name = newName;
+    targetNode.data.isMerged = true;
+    
+    // 重新計算位置
+    placenodes(newTree, props.internalNodeLabels, props.accessor, props.sort);
+    
+    // 更新樹狀結構
+    if (props.onTreeUpdate) {
+      props.onTreeUpdate(newTree);
+    }
+  };
+  
+  const findNode = (tree, nodeId) => {
+    const search = (node) => {
+      if (node.unique_id === nodeId) return node;
+      if (!node.children) return null;
+      for (let child of node.children) {
+        const found = search(child);
+        if (found) return found;
+      }
+      return null;
+    };
+    return search(tree.nodes);
+  };
+  
   return (<g transform={props.transform}>
     {props.includeBLAxis ? <g>
       <text
@@ -177,6 +213,7 @@ function Phylotree(props) {
         key = source_id + "," + target_id,
         show_label = props.internalNodeLabels ||
           (props.showLabels && tree.isLeafNode(link.target));
+      {/*呼叫Branch*/}
       return (<Branch
         key={key}
         xScale={x_scale}
@@ -191,6 +228,7 @@ function Phylotree(props) {
         labelStyler={props.labelStyler}
         tooltip={props.tooltip}
         setTooltip={setTooltip}
+        onMerge={handleMerge}
         onClick={props.onBranchClick}
       />);
     }) }
@@ -215,7 +253,8 @@ Phylotree.defaultProps = {
   tooltip: null,
   sort: null,
   includeBLAxis: false,
-  onBranchClick: () => null
+  onBranchClick: () => null,
+  onTreeUpdate: null
 };
 
 export default Phylotree;
