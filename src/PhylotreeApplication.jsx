@@ -255,10 +255,6 @@ class PhylotreeApplication extends Component {
           onBranchClick={branch => {
             this.setState({clickedBranch: branch.target.data.name})
           }}
-          onTreeUpdate={(newTree) => {
-            // 處理樹的更新
-            console.log('Tree updated:', newTree);
-          }}
           includeBLAxis
         />
       </svg>
