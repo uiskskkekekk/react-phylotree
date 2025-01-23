@@ -34,7 +34,20 @@ function Branch(props) {
     ),
     label_style = target.data.name && props.labelStyler ?
       props.labelStyler(target.data) :
-      {} ;
+      {};
+  
+  // 可以添加新的事件處理函數
+  const handleNodeClick = (e, nodeData) => {
+    e.stopPropagation(); // 防止事件冒泡
+    // 處理節點點擊
+    if (props.onNodeClick) {
+      props.onNodeClick(nodeData);
+    }
+  };
+
+  // 給節點添加hover效果
+  const [isHovered, setIsHovered] = React.useState(false);
+
   return (<g className="node"
   >
     <path
@@ -54,6 +67,27 @@ function Branch(props) {
         setTooltip(false);
       } : undefined}
     />
+
+    {/* 源節點(起點) */}
+    <g 
+      className="internal-node" 
+      transform={`translate(${source_x},${source_y})`}
+      onClick={(e) => handleNodeClick(e, source.data)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <circle 
+        // r="3"
+        style={{
+          fill: isHovered ? 'grey' : '#ffffff',
+          r: isHovered ? '5' : '3',
+          cursor: 'pointer',
+          stroke: "grey",
+          strokeWidth: 1.2
+        }}
+      />
+    </g>
+
     {showLabel ? <line  //數節點虛線
       x1={target_x}
       x2={tracer_x2}

@@ -20,20 +20,21 @@ function x_no_branch_lengths(node) {
   return node.parent ? node.parent.data.abstract_x + 1 : 0;
 }
 
-function default_accessor(node){
+function default_accessor(node){   //使用accessor函數獲取分支長度
   return +node.data.attribute;
 }
 
 function sort_nodes (tree, direction) {
-  tree.traverse_and_compute (function (n) {
+  tree.traverse_and_compute (function (n) {    //樹的遍歷
     var d = 1;
     if (n.children && n.children.length) {
       d += max (n.children, function (d) { return d["count_depth"];});
     }
     n["count_depth"] = d;
   });
+  //使用traverse_and_compute來遍歷樹並計算每個節點的深度
   const asc = direction == "ascending";
-  tree.resortChildren (function (a,b) {
+  tree.resortChildren (function (a,b) {   //tree.resortChildren() - 重新排序子節點
     return (a["count_depth"] - b["count_depth"]) * (asc ? 1 : -1);
   });
 }
@@ -46,14 +47,14 @@ function placenodes(tree, perform_internal_layout, accessor, sort) {
   var current_leaf_height = -1,
     unique_id = 0;
   tree.max_x = 0;
-  const has_branch_lengths = Boolean(accessor(tree.getTips()[0])),
+  const has_branch_lengths = Boolean(accessor(tree.getTips()[0])),  //tree.getTips() - 獲取所有葉節點
     x_branch_length = has_branch_lengths ? x_branch_lengths : x_no_branch_lengths;
   function node_layout(node) {
     if(!node.unique_id) {
       unique_id = node.unique_id = unique_id + 1;
     }
-    node.data.abstract_x = x_branch_length(node, accessor);
-    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);
+    node.data.abstract_x = x_branch_length(node, accessor);   //node.data.abstract_x - 為節點添加座標信息
+    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);  //node.data.abstract_x - 為節點添加座標信息
     if(node.children) {
       node.data.abstract_y = node.children.map(node_layout)
         .reduce( (a,b) => a + b, 0) / node.children.length;
@@ -65,9 +66,9 @@ function placenodes(tree, perform_internal_layout, accessor, sort) {
 
   function internal_node_layout(node) {
     unique_id = node.unique_id = unique_id + 1;
-    node.data.abstract_x = x_branch_length(node, accessor);
-    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);
-    if(!tree.isLeafNode(node)) {
+    node.data.abstract_x = x_branch_length(node, accessor);   //node.data.abstract_x - 為節點添加座標信息
+    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);  //node.data.abstract_x - 為節點添加座標信息
+    if(!tree.isLeafNode(node)) {  //tree.isLeafNode() - 判斷是否為葉節點
       node.children.forEach(internal_node_layout);
     }
     if(!node.data.abstract_y && node.data.name != "root") {
@@ -87,7 +88,7 @@ function placenodes(tree, perform_internal_layout, accessor, sort) {
     tree.max_y = 0;
     tree.node_order = [];
     internal_node_layout(tree.nodes);
-    const root = tree.getNodeByName("root");
+    const root = tree.getNodeByName("root");   //tree.getNodeByName("root") - 通過名字查找節點
     root.data.abstract_y = root.children.map(child => child.data.abstract_y)
       .reduce((a,b)=>a+b, 0) / root.children.length;
   } else {
@@ -118,7 +119,7 @@ function Phylotree(props) {
   if (!tree && !newick) {
     return <g />;
   } else if(!tree) {
-    tree = new phylotree(newick);
+    tree = new phylotree(newick); //使用phylotree的newick格式解析能力,自動構建樹結構
   }
   if(!props.skipPlacement) {
     placenodes(tree, props.internalNodeLabels, props.accessor, props.sort);
@@ -129,7 +130,7 @@ function Phylotree(props) {
     if(node.children) node.children.forEach(attachTextWidth);
   }
   attachTextWidth(tree.nodes);
-  const sorted_tips = tree.getTips().sort((a,b) => (
+  const sorted_tips = tree.getTips().sort((a,b) => (   //tree.getTips() - 獲取所有葉節點
       b.data.abstract_x - a.data.abstract_x
     ));
   var rightmost;
@@ -176,7 +177,7 @@ function Phylotree(props) {
         target_id = link.target.unique_id,
         key = source_id + "," + target_id,
         show_label = props.internalNodeLabels ||
-          (props.showLabels && tree.isLeafNode(link.target));
+          (props.showLabels && tree.isLeafNode(link.target));   //tree.isLeafNode() - 判斷是否為葉節點
       return (<Branch
         key={key}
         xScale={x_scale}
@@ -192,6 +193,13 @@ function Phylotree(props) {
         tooltip={props.tooltip}
         setTooltip={setTooltip}
         onClick={props.onBranchClick}
+        onNodeClick={(nodeData) => {
+          console.log('Node clicked:', nodeData);
+          // 執行其他操作，比如:
+          // - 展開/收起子節點
+          // - 顯示詳細信息
+          // - 觸發狀態更新
+        }}
       />);
     }) }
     { tooltip ? <props.tooltip
