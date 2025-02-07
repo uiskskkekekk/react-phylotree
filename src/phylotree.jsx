@@ -114,28 +114,76 @@ function getColorScale(tree, highlightBranches) {
 
 function Phylotree(props) {
   const [tooltip, setTooltip] = useState(false);
+  const [collapsedNodes, setCollapsedNodes] = useState(new Set());
   const { width, height, maxLabelWidth } = props;
+
   var{ tree, newick } = props;
-  if (!tree && !newick) {
-    return <g />;
-  } else if(!tree) {
-    tree = new phylotree(newick); //使用phylotree的newick格式解析能力,自動構建樹結構
-  }
+  if (!tree && !newick) return <g />;
+  if(!tree) tree = new phylotree(newick);
   if(!props.skipPlacement) {
     placenodes(tree, props.internalNodeLabels, props.accessor, props.sort);
   }
+
+  console.log("Tree links structure:", tree.links.map(link => ({
+    source: {
+      name: link.source.data.name,
+      id: link.source.unique_id
+    },
+    target: {
+      name: link.target.data.name,
+      id: link.target.unique_id
+    }
+  })));
+
+  console.log("Node structure:", tree.links[0]);
+
+
+  
+
+  function getHiddenBranches(collapsedNodes) {
+    const hiddenNodes = new Set();
+    
+    function traverse(node, isParentCollapsed = false) {
+      // 如果父節點被收合或當前節點被收合，則隱藏當前節點
+      if (isParentCollapsed || collapsedNodes.has(node.unique_id)) {
+        hiddenNodes.add(node.unique_id);
+        
+        // 如果節點被收合，則其所有子節點都應該被隱藏
+        if (node.children) {
+          node.children.forEach(child => traverse(child, true));
+        }
+      } 
+      // 如果節點沒有被收合，繼續檢查其子節點
+      else if (node.children) {
+        node.children.forEach(child => traverse(child, false));
+      }
+    }
+    
+    // 從樹的根節點開始遍歷
+    traverse(tree.nodes);
+    
+    return hiddenNodes;
+  }
+
+  const hiddenBranches = getHiddenBranches(collapsedNodes);
+
+
+
 
   function attachTextWidth(node) {
     node.data.text_width = text_width(node.data.name, 14, maxLabelWidth);
     if(node.children) node.children.forEach(attachTextWidth);
   }
   attachTextWidth(tree.nodes);
-  const sorted_tips = tree.getTips().sort((a,b) => (   //tree.getTips() - 獲取所有葉節點
-      b.data.abstract_x - a.data.abstract_x
-    ));
+  
+  const sorted_tips = tree.getTips().sort((a,b) => 
+    b.data.abstract_x - a.data.abstract_x
+  );
+
   var rightmost;
-  if (!props.showLabels) rightmost = width;
-  else {
+  if (!props.showLabels) {
+    rightmost = width;
+  } else {
     for(let i=0; i < sorted_tips.length; i++) {
       let tip = sorted_tips[i];
       rightmost = width - tip.data.text_width;
@@ -149,15 +197,46 @@ function Phylotree(props) {
       if(none_cross) break;
     }
   }
+
   const x_scale = scaleLinear()
-      .domain([0, tree.max_x])
-      .range([0, rightmost]),
-    y_scale = scaleLinear()
-      .domain([0, tree.max_y])
-      .range([props.includeBLAxis ? 60 : 0, height]),
+    .domain([0, tree.max_x])
+    .range([0, rightmost]),
+  y_scale = scaleLinear()
+    .domain([0, tree.max_y])
+    .range([props.includeBLAxis ? 60 : 0, height]),
     color_scale = getColorScale(tree, props.highlightBranches);
+  
+
+  // const toggleNode = (nodeData) => {
+  //   setCollapsedNodes(prev => {
+  //     const next = new Set(prev);
+  //     if (next.has(nodeData.name)) {
+  //       next.delete(nodeData.name);
+  //     } else {
+  //       next.add(nodeData.name);
+  //     }
+  //     return next;
+  //   });
+  // };
+
+  const toggleNode = (nodeData) => {
+    setCollapsedNodes(prev => {
+      const next = new Set(prev);
+      // 使用 unique_id 而不是 name
+      if (next.has(nodeData.unique_id)) {
+        next.delete(nodeData.unique_id);
+      } else {
+        next.add(nodeData.unique_id);
+      }
+      return next;
+    });
+  };
+
+
+
+
   return (<g transform={props.transform}>
-    {props.includeBLAxis ? <g>
+    {props.includeBLAxis && <g>
       <text
         x={x_scale(tree.max_x/2)}
         y={10}
@@ -167,46 +246,38 @@ function Phylotree(props) {
       >
         Substitutions per site
       </text>
-      <AxisTop
-        transform={`translate(0, 40)`}
-        scale={x_scale}
-      />
-    </g> : null }
-    {tree.links.map(link => {
-      const source_id = link.source.unique_id,
-        target_id = link.target.unique_id,
-        key = source_id + "," + target_id,
-        show_label = props.internalNodeLabels ||
-          (props.showLabels && tree.isLeafNode(link.target));   //tree.isLeafNode() - 判斷是否為葉節點
-      return (<Branch
-        key={key}
-        xScale={x_scale}
-        yScale={y_scale}
-        colorScale={color_scale}
-        link={link}
-        showLabel={show_label}
-        maxLabelWidth={maxLabelWidth}
-        width={width}
-        alignTips={props.alignTips}
-        branchStyler={props.branchStyler}
-        labelStyler={props.labelStyler}
-        tooltip={props.tooltip}
-        setTooltip={setTooltip}
-        onClick={props.onBranchClick}
-        onNodeClick={(nodeData) => {
-          console.log('Node clicked:', nodeData);
-          // 執行其他操作，比如:
-          // - 展開/收起子節點
-          // - 顯示詳細信息
-          // - 觸發狀態更新
-        }}
-      />);
-    }) }
-    { tooltip ? <props.tooltip
-      width={props.width}
-      height={props.height}
-      {...tooltip}
-    /> : null }
+      <AxisTop transform={`translate(0, 40)`} scale={x_scale} />
+    </g>}
+    {tree.links
+      .filter(link => !hiddenBranches.has(link.target.unique_id))
+      .map(link => {
+        const source_id = link.source.unique_id,
+          target_id = link.target.unique_id,
+          key = source_id + "," + target_id,
+          show_label = props.internalNodeLabels ||
+            (props.showLabels && tree.isLeafNode(link.target));
+        return (
+          <Branch
+            key={key}
+            xScale={x_scale}
+            yScale={y_scale}
+            colorScale={color_scale}
+            link={link}
+            showLabel={show_label}
+            maxLabelWidth={maxLabelWidth}
+            width={width}
+            alignTips={props.alignTips}
+            branchStyler={props.branchStyler}
+            labelStyler={props.labelStyler}
+            tooltip={props.tooltip}
+            setTooltip={setTooltip}
+            onClick={props.onBranchClick}
+            isCollapsed={collapsedNodes.has(link.target.unique_id)}
+            onNodeClick={(node) => toggleNode({...node, unique_id: link.target.unique_id})}
+          />
+        );
+    })}
+    {tooltip && <props.tooltip width={props.width} height={props.height} {...tooltip} />}
   </g>);
 }
 
