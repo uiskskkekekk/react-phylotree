@@ -315,9 +315,9 @@ function Phylotree(props) {
           onMouseLeave={() => setHoveredNode(null)}
         >
         <circle 
-          r={3}
+          r={hoveredNode === id ? 5 : 3}
           style={{
-            fill: '#ffffff',
+            fill: hoveredNode === id ? 'grey' : '#ffffff',
             cursor: 'pointer',
             stroke: "grey",
             strokeWidth: 1.2
