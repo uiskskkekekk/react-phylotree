@@ -111,11 +111,32 @@ function getColorScale(tree, highlightBranches) {
     .range(pairs.map(p => p[1]));
 }
 
+function collectInternalNodes(tree) {
+  const internalNodes = new Map(); // 使用 Map 來存儲節點信息
+  
+  tree.links.forEach(link => {
+    const source = link.source;
+    if (source.children && source.children.length > 0) {
+      // 如果這個源節點還沒被記錄
+      if (!internalNodes.has(source.unique_id)) {
+        internalNodes.set(source.unique_id, {
+          x: source.data.abstract_x,
+          y: source.data.abstract_y,
+          node: source
+        });
+      }
+    }
+  });
+  
+  return internalNodes;
+}
+
 
 function Phylotree(props) {
   const [tooltip, setTooltip] = useState(false);
   const [collapsedNodes, setCollapsedNodes] = useState(new Set());
   const { width, height, maxLabelWidth } = props;
+  const [hoveredNode, setHoveredNode] = useState(null);
 
   var{ tree, newick } = props;
   if (!tree && !newick) return <g />;
@@ -137,37 +158,52 @@ function Phylotree(props) {
 
   console.log("Node structure:", tree.links[0]);
 
-
   
 
   function getHiddenBranches(collapsedNodes) {
     const hiddenNodes = new Set();
     
     function traverse(node, isParentCollapsed = false) {
-      // 如果父節點被收合或當前節點被收合，則隱藏當前節點
-      if (isParentCollapsed || collapsedNodes.has(node.unique_id)) {
-        hiddenNodes.add(node.unique_id);
-        
-        // 如果節點被收合，則其所有子節點都應該被隱藏
+      // 只隱藏子節點，不隱藏當前節點
+      if (isParentCollapsed) {
+        // 如果父節點被收合，隱藏所有子節點
         if (node.children) {
-          node.children.forEach(child => traverse(child, true));
+          node.children.forEach(child => {
+            hiddenNodes.add(child.unique_id);
+            traverse(child, true);
+          });
         }
-      } 
-      // 如果節點沒有被收合，繼續檢查其子節點
-      else if (node.children) {
+      } else if (collapsedNodes.has(node.unique_id)) {
+        // 如果當前節點被收合，只隱藏子節點
+        if (node.children) {
+          node.children.forEach(child => {
+            hiddenNodes.add(child.unique_id);
+            traverse(child, true);
+          });
+        }
+      } else if (node.children) {
+        // 繼續遍歷未收合的子節點
         node.children.forEach(child => traverse(child, false));
       }
     }
     
-    // 從樹的根節點開始遍歷
     traverse(tree.nodes);
-    
     return hiddenNodes;
   }
 
   const hiddenBranches = getHiddenBranches(collapsedNodes);
 
-
+  function shouldHideInternalNode(nodeId, nodeInfo) {
+    // 檢查此節點是否在任何收合節點的路徑上
+    let currentNode = nodeInfo.node;
+    while (currentNode.parent) {
+      if (collapsedNodes.has(currentNode.parent.unique_id)) {
+        return true;
+      }
+      currentNode = currentNode.parent;
+    }
+    return false;
+  }
 
 
   function attachTextWidth(node) {
@@ -206,23 +242,11 @@ function Phylotree(props) {
     .range([props.includeBLAxis ? 60 : 0, height]),
     color_scale = getColorScale(tree, props.highlightBranches);
   
-
-  // const toggleNode = (nodeData) => {
-  //   setCollapsedNodes(prev => {
-  //     const next = new Set(prev);
-  //     if (next.has(nodeData.name)) {
-  //       next.delete(nodeData.name);
-  //     } else {
-  //       next.add(nodeData.name);
-  //     }
-  //     return next;
-  //   });
-  // };
+  
 
   const toggleNode = (nodeData) => {
     setCollapsedNodes(prev => {
       const next = new Set(prev);
-      // 使用 unique_id 而不是 name
       if (next.has(nodeData.unique_id)) {
         next.delete(nodeData.unique_id);
       } else {
@@ -232,6 +256,7 @@ function Phylotree(props) {
     });
   };
 
+  const internalNodes = collectInternalNodes(tree);
 
 
 
@@ -248,36 +273,67 @@ function Phylotree(props) {
       </text>
       <AxisTop transform={`translate(0, 40)`} scale={x_scale} />
     </g>}
+
+    {/* 先渲染所有分支 */}
     {tree.links
       .filter(link => !hiddenBranches.has(link.target.unique_id))
-      .map(link => {
-        const source_id = link.source.unique_id,
-          target_id = link.target.unique_id,
-          key = source_id + "," + target_id,
-          show_label = props.internalNodeLabels ||
-            (props.showLabels && tree.isLeafNode(link.target));
-        return (
-          <Branch
-            key={key}
-            xScale={x_scale}
-            yScale={y_scale}
-            colorScale={color_scale}
-            link={link}
-            showLabel={show_label}
-            maxLabelWidth={maxLabelWidth}
-            width={width}
-            alignTips={props.alignTips}
-            branchStyler={props.branchStyler}
-            labelStyler={props.labelStyler}
-            tooltip={props.tooltip}
-            setTooltip={setTooltip}
-            onClick={props.onBranchClick}
-            isCollapsed={collapsedNodes.has(link.target.unique_id)}
-            onNodeClick={(node) => toggleNode({...node, unique_id: link.target.unique_id})}
-          />
-        );
-    })}
-    {tooltip && <props.tooltip width={props.width} height={props.height} {...tooltip} />}
+      .map(link => (
+        <Branch
+          key={`${link.source.unique_id},${link.target.unique_id}`}
+          xScale={x_scale}
+          yScale={y_scale}
+          colorScale={color_scale}
+          link={link}
+          showLabel={props.internalNodeLabels ||
+            (props.showLabels && tree.isLeafNode(link.target))}
+          maxLabelWidth={maxLabelWidth}
+          width={width}
+          alignTips={props.alignTips}
+          branchStyler={props.branchStyler}
+          labelStyler={props.labelStyler}
+          tooltip={props.tooltip}
+          setTooltip={setTooltip}
+          onClick={props.onBranchClick}
+          isCollapsed={collapsedNodes.has(link.target.unique_id)}
+        />
+      ))}
+
+    
+    {/* 再渲染所有內部節點 */}
+    {Array.from(internalNodes.entries())
+      .filter(([id, nodeInfo]) => !shouldHideInternalNode(id, nodeInfo))
+      .map(([id, nodeInfo]) => (
+        <g
+          key={`internal-${id}`}
+          className="internal-node"
+          transform={`translate(${x_scale(nodeInfo.x)},${y_scale(nodeInfo.y)})`}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleNode({unique_id: id});
+          }}
+          onMouseEnter={() => setHoveredNode(id)}
+          onMouseLeave={() => setHoveredNode(null)}
+        >
+        <circle 
+          r={3}
+          style={{
+            fill: '#ffffff',
+            cursor: 'pointer',
+            stroke: "grey",
+            strokeWidth: 1.2
+          }}
+        />
+        {nodeInfo.node.children && nodeInfo.node.children.length > 0 && (
+          <text
+            y="-8"
+            textAnchor="middle"
+            style={{ fontSize: 12, cursor: 'pointer' }}
+          >
+            {collapsedNodes.has(id) ? '+' : '-'}
+          </text>
+        )}
+      </g>
+    ))}
   </g>);
 }
 

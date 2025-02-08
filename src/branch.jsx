@@ -3,7 +3,7 @@ import React from "react";
 import { line } from "d3-shape";
 
 function Branch(props) {
-  const [isHovered, setIsHovered] = React.useState(false);
+  // const [isHovered, setIsHovered] = React.useState(false);
   const { xScale, yScale, colorScale, showLabel, setTooltip, isCollapsed } = props;
   const { source, target } = props.link;
   
@@ -36,35 +36,26 @@ function Branch(props) {
   const label_style = target.data.name && props.labelStyler ?
     props.labelStyler(target.data) : {};
 
-  
-   // 處理節點點擊
+
   // const handleNodeClick = (e, nodeData) => {
   //   e.stopPropagation();
   //   if (props.onNodeClick) {
-  //     props.onNodeClick(nodeData);
+  //     props.onNodeClick({
+  //       ...nodeData,
+  //       unique_id: source.unique_id  // 使用 source.unique_id
+  //     });
   //   }
   // };
 
-  const handleNodeClick = (e, nodeData) => {
-    e.stopPropagation();
-    if (props.onNodeClick) {
-      // 確保傳遞 unique_id
-      props.onNodeClick({
-        ...nodeData,
-        unique_id: source.unique_id  // 使用 source.unique_id
-      });
-    }
-  };
 
-
-  // 節點樣式
-  const nodeStyle = {
-    fill: isHovered ? 'grey' : '#ffffff',
-    r: isHovered ? 5 : 3,
-    cursor: 'pointer',
-    stroke: "grey",
-    strokeWidth: 1.2
-  };
+  // // 節點樣式
+  // const nodeStyle = {
+  //   fill: isHovered ? 'grey' : '#ffffff',
+  //   r: isHovered ? 5 : 3,
+  //   cursor: 'pointer',
+  //   stroke: "grey",
+  //   strokeWidth: 1.2
+  // };
 
   return (
     <g className="node">
@@ -83,27 +74,6 @@ function Branch(props) {
         } : undefined}
         onMouseOut={props.tooltip ? () => setTooltip(false) : undefined}
       />
-
-      <g
-        className="internal-node"
-        transform={`translate(${source_x},${source_y})`}
-        onClick={(e) => handleNodeClick(e, source.data)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <circle 
-          style={nodeStyle}
-        />
-        {source.children && source.children.length > 0 && (
-          <text
-            y="-8"
-            textAnchor="middle"
-            style={{ fontSize: 12, cursor: 'pointer' }}
-          >
-            {isCollapsed ? '+' : '-'}
-          </text>
-        )}
-      </g>
 
       {showLabel && (
         <>
