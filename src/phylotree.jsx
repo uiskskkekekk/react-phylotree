@@ -131,12 +131,64 @@ function collectInternalNodes(tree) {
   return internalNodes;
 }
 
+function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLabels }) {  //merge後重新命名
+  const [isEditing, setIsEditing] = useState(false);
+
+  const adjustedX = internalNodeLabels ? x + 35 : x + 10;  // 如果有 internal label 就多移動一些
+
+  // 只有收合的節點才顯示標籤
+  if (!isCollapsed) return null;
+
+  return isEditing ? (
+    <foreignObject   //雙擊重新命名
+      x={adjustedX}
+      y={y - 15}
+      width="100"
+      height="20"
+      onClick={e => e.stopPropagation()} // 防止點擊觸發樹的事件
+    >
+      <input
+        type="text"
+        value={label || ''}
+        onChange={e => onLabelChange(id, e.target.value)}
+        onBlur={() => setIsEditing(false)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            setIsEditing(false);  // 按下 Enter 時結束編輯
+          }
+        }}
+        autoFocus
+        style={{
+          border: '1px solid #ccc',
+          borderRadius: '3px',
+          padding: '2px 5px'
+        }}
+      />
+    </foreignObject>
+  ) : (
+    <text
+      x={adjustedX}
+      y={y}
+      style={{ 
+        cursor: 'pointer',
+        fontSize: '16px'
+      }}
+      onClick={e => e.stopPropagation()} // 防止點擊觸發樹的事件
+      onDoubleClick={() => setIsEditing(true)}
+    >
+      {label || 'Double click to name'}
+    </text>
+  );
+}
+
 
 function Phylotree(props) {
   const [tooltip, setTooltip] = useState(false);
   const [collapsedNodes, setCollapsedNodes] = useState(new Set());
   const { width, height, maxLabelWidth } = props;
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [nodeLabels, setNodeLabels] = useState(new Map());
+  const [editingNode, setEditingNode] = useState(null);  // 需要添加這行
 
   var{ tree, newick } = props;
   if (!tree && !newick) return <g />;
@@ -259,6 +311,12 @@ function Phylotree(props) {
   const internalNodes = collectInternalNodes(tree);
 
 
+  const handleLabelChange = (id, newLabel) => {
+    const newLabels = new Map(nodeLabels);
+    newLabels.set(id, newLabel);
+    setNodeLabels(newLabels);
+  };
+
 
   return (<g transform={props.transform}>
     {props.includeBLAxis && <g>
@@ -299,7 +357,7 @@ function Phylotree(props) {
       ))}
 
     
-    {/* 再渲染所有內部節點 */}
+    {/* 渲染所有內部節點 */}
     {Array.from(internalNodes.entries())
       .filter(([id, nodeInfo]) => !shouldHideInternalNode(id, nodeInfo))
       .map(([id, nodeInfo]) => (
@@ -314,26 +372,33 @@ function Phylotree(props) {
           onMouseEnter={() => setHoveredNode(id)}
           onMouseLeave={() => setHoveredNode(null)}
         >
-        <circle 
-          r={hoveredNode === id ? 5 : 3}
-          style={{
-            fill: hoveredNode === id ? 'grey' : '#ffffff',
-            cursor: 'pointer',
-            stroke: "grey",
-            strokeWidth: 1.2
-          }}
+          <circle 
+            r={hoveredNode === id ? 5 : 3}
+            style={{
+              fill: hoveredNode === id ? 'grey' : '#ffffff',
+              cursor: 'pointer',
+              stroke: "grey",
+              strokeWidth: 1.2
+            }}
+          />
+        </g>
+      ))}
+    
+    {/* 單獨渲染標籤 */}
+    {Array.from(internalNodes.entries())
+      .filter(([id, nodeInfo]) => !shouldHideInternalNode(id, nodeInfo))
+      .map(([id, nodeInfo]) => (
+        <NodeLabel
+          key={`label-${id}`}
+          id={id}
+          x={x_scale(nodeInfo.x)}  // 位置可以調整
+          y={y_scale(nodeInfo.y) + 5}
+          isCollapsed={collapsedNodes.has(id)}
+          label={nodeLabels.get(id)}
+          onLabelChange={handleLabelChange}
+          internalNodeLabels={props.internalNodeLabels}  // 傳遞是否顯示 internal label
         />
-        {nodeInfo.node.children && nodeInfo.node.children.length > 0 && (
-          <text
-            y="-8"
-            textAnchor="middle"
-            style={{ fontSize: 12, cursor: 'pointer' }}
-          >
-            {collapsedNodes.has(id) ? '+' : '-'}
-          </text>
-        )}
-      </g>
-    ))}
+      ))}
   </g>);
 }
 
