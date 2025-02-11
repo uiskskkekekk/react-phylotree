@@ -35,27 +35,7 @@ function Branch(props) {
 
   const label_style = target.data.name && props.labelStyler ?
     props.labelStyler(target.data) : {};
-
-
-  // const handleNodeClick = (e, nodeData) => {
-  //   e.stopPropagation();
-  //   if (props.onNodeClick) {
-  //     props.onNodeClick({
-  //       ...nodeData,
-  //       unique_id: source.unique_id  // 使用 source.unique_id
-  //     });
-  //   }
-  // };
-
-
-  // // 節點樣式
-  // const nodeStyle = {
-  //   fill: isHovered ? 'grey' : '#ffffff',
-  //   r: isHovered ? 5 : 3,
-  //   cursor: 'pointer',
-  //   stroke: "grey",
-  //   strokeWidth: 1.2
-  // };
+  
 
   return (
     <g className="node">
