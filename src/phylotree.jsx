@@ -182,26 +182,11 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
 }
 
 
-function getAdjustedDimensions(tree, hiddenBranches) {
-  let maxX = 0;
-  let maxY = 0;
-  
-  // 遍歷所有可見的節點來計算實際的最大值
-  tree.links
-    .filter(link => !hiddenBranches.has(link.target.unique_id))
-    .forEach(link => {
-      maxX = Math.max(maxX, link.target.data.abstract_x);
-      maxY = Math.max(maxY, link.target.data.abstract_y);
-    });
 
-  return { maxX, maxY };
-}
-
-
-function calculateOptimalDimensions(tree) {
+function calculateOptimalDimensions(tree) {  //resizing
   // 獲取所有葉節點
   const leafNodes = tree.getTips();
-  const minVerticalSpacing = 30; // 每個分支的最小垂直間距（可調整）
+  const minVerticalSpacing = 25; // 每個分支的最小垂直間距（可調整）
   
   // 計算垂直方向所需的最小高度
   const optimalHeight = leafNodes.length * minVerticalSpacing;
@@ -225,7 +210,7 @@ function calculateOptimalDimensions(tree) {
   });
 
   // 水平方向需要考慮分支長度和標籤寬度
-  const minHorizontalSpacing = 50; // 分支之間的最小水平間距
+  const minHorizontalSpacing = 35; // 分支之間的最小水平間距
   const optimalWidth = (maxPathLength * minHorizontalSpacing) + maxLabelWidth + 100; // 額外加入邊距
 
   return {
@@ -306,7 +291,6 @@ function Phylotree(props) {
   }
 
   const hiddenBranches = getHiddenBranches(collapsedNodes);
-  const { maxX, maxY } = getAdjustedDimensions(tree, hiddenBranches);
 
   function shouldHideInternalNode(nodeId, nodeInfo) {
     let currentNode = nodeInfo.node;
@@ -348,14 +332,12 @@ function Phylotree(props) {
   }
 
   const x_scale = scaleLinear()
-    .domain([0, maxX])
-    .range([0, rightmost || actualWidth]);
-
-  const y_scale = scaleLinear()
-    .domain([0, maxY])
-    .range([props.includeBLAxis ? 60 : 0, actualHeight]);
-  
-  const color_scale = getColorScale(tree, props.highlightBranches);
+    .domain([0, tree.max_x])
+    .range([0, rightmost]),
+  y_scale = scaleLinear()
+    .domain([0, tree.max_y])
+    .range([props.includeBLAxis ? 60 : 0, actualHeight]),
+    color_scale = getColorScale(tree, props.highlightBranches);
 
   const toggleNode = (nodeData) => {
     // 先更新 collapsedNodes
@@ -368,7 +350,7 @@ function Phylotree(props) {
       }
       return next;
     });
-  
+    //******************************************************
     // 直接計算新的尺寸
     const optimalDims = calculateOptimalDimensions(tree, props.showLabels);
     
@@ -379,6 +361,7 @@ function Phylotree(props) {
     if (props.onDimensionsChange) {
       props.onDimensionsChange(optimalDims);
     }
+    //******************************************************
   };
 
   const internalNodes = collectInternalNodes(tree);
