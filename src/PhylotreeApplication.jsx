@@ -125,8 +125,6 @@ class PhylotreeApplication extends Component {
     super(props);
     this.state = {
       tree: null,
-      width: 500,
-      height: 500,
       alignTips: "right",
       sort: null,
       internal: false,
@@ -147,12 +145,11 @@ class PhylotreeApplication extends Component {
       reader.readAsText(file);
     }
   }
-  // componentDidMount() {
-  //   text("data/CD2.new")
-  //     .then(newick => {
-  //       this.setState({newick});
-  //     });
-  // }
+
+  handleDimensionsChange = ({ width, height }) => {
+    this.setState({ width, height });
+  }
+
   toggleDimension(dimension, direction) {  //調整樹寬樹高
     const new_dimension = this.state[dimension] +
       (direction == "expand" ? 40 : -40),  //增長或縮短
@@ -172,6 +169,10 @@ class PhylotreeApplication extends Component {
   render() {
     const { padding } = this.props;
     const { width, height, clickedBranch } = this.state;
+
+    const svgWidth = width + (padding * 4);  // 增加左右邊距
+    const svgHeight = height + (padding * 4); // 增加上下邊距
+
     return (<div style={{display: "flex", flexDirection: "column", alignItems: "flex-start"}}>
       <h1>React Phylotree</h1>
       <div style={{ display: "flex", justifyContent: "space-around" }}>
@@ -242,13 +243,14 @@ class PhylotreeApplication extends Component {
           </div> {/*button group container*/}
         </div> {/*phylotree container*/}
       </div>
-      <svg width={width} height={height}>
+      <svg width={svgWidth} height={svgHeight}>
         {/*這裡呼叫Phylotree，Phylotree會在呼叫Branch*/}
         <Phylotree
-          width={width-2*padding}
-          height={height-2*padding}
-          transform={`translate(${padding}, ${padding})`}
+          width={width}
+          height={height}
+          transform={`translate(${padding * 2}, ${padding * 2})`}
           newick={this.state.newick}
+          onDimensionsChange={this.handleDimensionsChange}
           alignTips={this.state.alignTips}
           sort={this.state.sort}
           internalNodeLabels={this.state.internal}
