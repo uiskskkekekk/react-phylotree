@@ -182,20 +182,6 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
 }
 
 
-function getAdjustedDimensions(tree, hiddenBranches) {
-  let maxX = 0;
-  let maxY = 0;
-  
-  // 遍歷所有可見的節點來計算實際的最大值
-  tree.links
-    .filter(link => !hiddenBranches.has(link.target.unique_id))
-    .forEach(link => {
-      maxX = Math.max(maxX, link.target.data.abstract_x);
-      maxY = Math.max(maxY, link.target.data.abstract_y);
-    });
-
-  return { maxX, maxY };
-}
 
 
 function Phylotree(props) {
@@ -259,7 +245,6 @@ function Phylotree(props) {
   }
 
   const hiddenBranches = getHiddenBranches(collapsedNodes);
-  const { maxX, maxY } = getAdjustedDimensions(tree, hiddenBranches);
 
   function shouldHideInternalNode(nodeId, nodeInfo) {
     // 檢查此節點是否在任何收合節點的路徑上
@@ -303,14 +288,12 @@ function Phylotree(props) {
   }
 
   const x_scale = scaleLinear()
-    .domain([0, maxX])  // 使用調整後的 maxX
-    .range([0, rightmost]);
-
-  const y_scale = scaleLinear()
-    .domain([0, maxY])  // 使用調整後的 maxY
-    .range([props.includeBLAxis ? 60 : 0, height]);
-  
-  const color_scale = getColorScale(tree, props.highlightBranches);
+    .domain([0, tree.max_x])
+    .range([0, rightmost]),
+  y_scale = scaleLinear()
+    .domain([0, tree.max_y])
+    .range([props.includeBLAxis ? 60 : 0, height]),
+    color_scale = getColorScale(tree, props.highlightBranches);
   
 
   const toggleNode = (nodeData) => {
