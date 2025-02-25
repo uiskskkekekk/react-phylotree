@@ -186,7 +186,7 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
 function calculateOptimalDimensions(tree) {  //resizing
   // 獲取所有葉節點
   const leafNodes = tree.getTips();
-  const minVerticalSpacing = 25; // 每個分支的最小垂直間距（可調整）
+  const minVerticalSpacing = 20; // 每個分支的最小垂直間距（可調整）
   
   // 計算垂直方向所需的最小高度
   const optimalHeight = leafNodes.length * minVerticalSpacing;
@@ -210,7 +210,7 @@ function calculateOptimalDimensions(tree) {  //resizing
   });
 
   // 水平方向需要考慮分支長度和標籤寬度
-  const minHorizontalSpacing = 35; // 分支之間的最小水平間距
+  const minHorizontalSpacing = 25; // 分支之間的最小水平間距
   const optimalWidth = (maxPathLength * minHorizontalSpacing) + maxLabelWidth + 100; // 額外加入邊距
 
   return {
@@ -350,7 +350,7 @@ function Phylotree(props) {
       }
       return next;
     });
-    //******************************************************
+    //****************************************************** it try, but not well
     // 直接計算新的尺寸
     const optimalDims = calculateOptimalDimensions(tree, props.showLabels);
     
