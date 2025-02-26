@@ -4,7 +4,8 @@ function ContextMenu({
   visible, 
   position, 
   onClose, 
-  onCollapseSubtree, 
+  onCollapseSubtree,
+  isNodeCollapsed // 新增參數，表示節點是否已折疊
 }) {
   const menuRef = useRef(null);
 
@@ -48,12 +49,8 @@ function ContextMenu({
     borderBottom: '1px solid #eee',
   };
 
-  const sectionStyle = {
-    padding: '15px',
-    fontWeight: 'bold',
-    borderBottom: '1px solid #ddd',
-    backgroundColor: '#f9f9f9',
-  };
+  // 根據節點折疊狀態決定顯示的文字
+  const collapseText = isNodeCollapsed ? "Expand Subtree" : "Collapse Subtree";
 
   return (
     <div ref={menuRef} style={menuStyle}>
@@ -63,7 +60,7 @@ function ContextMenu({
         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
         onClick={onCollapseSubtree}
       >
-        Collapse Subtree
+        {collapseText}
       </div>
     </div>
   );

@@ -12,95 +12,95 @@ import text_width from "./text_width";
 function x_branch_lengths(node, accessor) {
   if (!node.parent) return 0;
   const bl = accessor(node);
-  return  bl + node.parent.data.abstract_x;
+  return bl + node.parent.data.abstract_x;
 }
 
 function x_no_branch_lengths(node) {
   return node.parent ? node.parent.data.abstract_x + 1 : 0;
 }
 
-function default_accessor(node){   //使用accessor函數獲取分支長度
+function default_accessor(node) { // 使用 accessor 函數獲取分支長度
   return +node.data.attribute;
 }
 
-function sort_nodes (tree, direction) {
-  tree.traverse_and_compute (function (n) {    //樹的遍歷
+function sort_nodes(tree, direction) {
+  tree.traverse_and_compute(function(n) { // 樹的遍歷
     var d = 1;
     if (n.children && n.children.length) {
-      d += max (n.children, function (d) { return d["count_depth"];});
+      d += max(n.children, function(d) { return d["count_depth"]; });
     }
     n["count_depth"] = d;
   });
-  //使用traverse_and_compute來遍歷樹並計算每個節點的深度
-  const asc = direction == "ascending";
-  tree.resortChildren (function (a,b) {   //tree.resortChildren() - 重新排序子節點
+  // 使用 traverse_and_compute 來遍歷樹並計算每個節點的深度
+  const asc = direction === "ascending";
+  tree.resortChildren(function(a, b) { // tree.resortChildren() - 重新排序子節點
     return (a["count_depth"] - b["count_depth"]) * (asc ? 1 : -1);
   });
 }
 
 function placenodes(tree, perform_internal_layout, accessor, sort) {
   accessor = accessor || default_accessor;
-  if(sort) {
+  if (sort) {
     sort_nodes(tree, sort);
   }
   var current_leaf_height = -1,
     unique_id = 0;
   tree.max_x = 0;
-  const has_branch_lengths = Boolean(accessor(tree.getTips()[0])),  //tree.getTips() - 獲取所有葉節點
+  const has_branch_lengths = Boolean(accessor(tree.getTips()[0])), // tree.getTips() - 獲取所有葉節點
     x_branch_length = has_branch_lengths ? x_branch_lengths : x_no_branch_lengths;
+  
   function node_layout(node) {
-    if(!node.unique_id) {
+    if (!node.unique_id) {
       unique_id = node.unique_id = unique_id + 1;
     }
-    node.data.abstract_x = x_branch_length(node, accessor);   //node.data.abstract_x - 為節點添加座標信息
-    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);  //node.data.abstract_x - 為節點添加座標信息
-    if(node.children) {
+    node.data.abstract_x = x_branch_length(node, accessor); // node.data.abstract_x - 為節點添加座標信息
+    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);
+    if (node.children) {
       node.data.abstract_y = node.children.map(node_layout)
-        .reduce( (a,b) => a + b, 0) / node.children.length;
+        .reduce((a, b) => a + b, 0) / node.children.length;
     } else {
-      current_leaf_height = node.data.abstract_y = current_leaf_height+1;
+      current_leaf_height = node.data.abstract_y = current_leaf_height + 1;
     }
     return node.data.abstract_y;
   }
 
   function internal_node_layout(node) {
     unique_id = node.unique_id = unique_id + 1;
-    node.data.abstract_x = x_branch_length(node, accessor);   //node.data.abstract_x - 為節點添加座標信息
-    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);  //node.data.abstract_x - 為節點添加座標信息
-    if(!tree.isLeafNode(node)) {  //tree.isLeafNode() - 判斷是否為葉節點
+    node.data.abstract_x = x_branch_length(node, accessor);
+    tree.max_x = Math.max(tree.max_x, node.data.abstract_x);
+    if (!tree.isLeafNode(node)) { // tree.isLeafNode() - 判斷是否為葉節點
       node.children.forEach(internal_node_layout);
     }
-    if(!node.data.abstract_y && node.data.name != "root") {
-      current_leaf_height = node.data.abstract_y = current_leaf_height+1;
+    if (!node.data.abstract_y && node.data.name !== "root") {
+      current_leaf_height = node.data.abstract_y = current_leaf_height + 1;
       tree.node_order.push(node.data.name);
     }
-    if(node.parent && !node.parent.data.abstract_y && node.data.name != "root") {
-      if(node.parent.data.name != "root") {
-        current_leaf_height = node.parent.data.abstract_y = current_leaf_height+1;
+    if (node.parent && !node.parent.data.abstract_y && node.data.name !== "root") {
+      if (node.parent.data.name !== "root") {
+        current_leaf_height = node.parent.data.abstract_y = current_leaf_height + 1;
         tree.node_order.push(node.parent.data.name);
-      } 
+      }
     }
     tree.max_y = Math.max(tree.max_y, current_leaf_height);
   }
 
-  if(perform_internal_layout) {
+  if (perform_internal_layout) {
     tree.max_y = 0;
     tree.node_order = [];
     internal_node_layout(tree.nodes);
-    const root = tree.getNodeByName("root");   //tree.getNodeByName("root") - 通過名字查找節點
+    const root = tree.getNodeByName("root"); // tree.getNodeByName("root") - 通過名字查找節點
     root.data.abstract_y = root.children.map(child => child.data.abstract_y)
-      .reduce((a,b)=>a+b, 0) / root.children.length;
+      .reduce((a, b) => a + b, 0) / root.children.length;
   } else {
     node_layout(tree.nodes);
     tree.max_y = current_leaf_height;
   }
 }
 
-
 function getColorScale(tree, highlightBranches) {
-  if(!highlightBranches) return null;
-  if(typeof highlightBranches === "boolean") {
-    return tree.parsed_tags && highlightBranches ? 
+  if (!highlightBranches) return null;
+  if (typeof highlightBranches === "boolean") {
+    return tree.parsed_tags && highlightBranches ?
       scaleOrdinal().domain(tree.parsed_tags).range(schemeCategory10) :
       null;
   }
@@ -130,16 +130,16 @@ function collectInternalNodes(tree) {
   return internalNodes;
 }
 
-function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLabels }) {  //merge後重新命名
+function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLabels }) { // merge後重新命名
   const [isEditing, setIsEditing] = useState(false);
 
-  const adjustedX = internalNodeLabels ? x + 35 : x + 10;  // 如果有 internal label 就多移動一些
+  const adjustedX = internalNodeLabels ? x + 35 : x + 10; // 如果有 internal label 就多移動一些
 
   // 只有收合的節點才顯示標籤
   if (!isCollapsed) return null;
 
   return isEditing ? (
-    <foreignObject   //雙擊重新命名
+    <foreignObject // 雙擊重新命名
       x={adjustedX}
       y={y - 15}
       width="100"
@@ -153,7 +153,7 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
         onBlur={() => setIsEditing(false)}
         onKeyDown={e => {
           if (e.key === 'Enter') {
-            setIsEditing(false);  // 按下 Enter 時結束編輯
+            setIsEditing(false); // 按下 Enter 時結束編輯
           }
         }}
         autoFocus
@@ -181,7 +181,7 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
   );
 }
 
-function calculateOptimalDimensions(tree) {  //resizing
+function calculateOptimalDimensions(tree) { // resizing
   // 獲取所有葉節點
   const leafNodes = tree.getTips();
   const minVerticalSpacing = 20; // 每個分支的最小垂直間距（可調整）
@@ -217,16 +217,14 @@ function calculateOptimalDimensions(tree) {  //resizing
   };
 }
 
-
 function Phylotree(props) {
   const [tooltip, setTooltip] = useState(false);
-  const [collapsedNodes, setCollapsedNodes] = useState(new Set());
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodeLabels, setNodeLabels] = useState(new Map());
   const [dimensions, setDimensions] = useState(null);
   
   const svgRef = useRef(null);
-  const { maxLabelWidth } = props;
+  const { maxLabelWidth, collapsedNodes } = props;
 
   useEffect(() => {
     var tree = props.tree;
@@ -247,17 +245,19 @@ function Phylotree(props) {
         }
       }
     }
-  }, [props.tree, props.newick, props.showLabels, collapsedNodes]);
+  }, [props.tree, props.newick, props.showLabels, collapsedNodes, props.internalNodeLabels, props.accessor, props.sort, props.onDimensionsChange, dimensions]);
   
-  // 處理節點右鍵點擊顯示選單，現在傳遞給父組件
-  const handleNodeContextMenu = (e, id, nodeInfo) => {
-    e.preventDefault(); // 阻止瀏覽器預設右鍵選單
+  const handleNodeClick = (e, id, nodeInfo) => {
+    e.preventDefault();
     e.stopPropagation();
     
     // 計算選單應該顯示的位置
     const rect = e.currentTarget.ownerSVGElement.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // 判斷節點是否已經被折疊
+    const isNodeCollapsed = collapsedNodes && collapsedNodes.has(id);
     
     // 如果父組件提供了處理函數，則調用它
     if (props.onContextMenuEvent) {
@@ -265,16 +265,46 @@ function Phylotree(props) {
         visible: true,
         position: { x, y },
         nodeId: id,
-        nodeData: nodeInfo
+        nodeData: nodeInfo,
+        isNodeCollapsed: isNodeCollapsed
       });
     }
   };
+  
+  // 處理節點右鍵點擊顯示選單，傳遞給父組件
+  // const handleNodeContextMenu = (e, id, nodeInfo) => {
+  //   e.preventDefault(); // 阻止瀏覽器預設右鍵選單
+  //   e.stopPropagation();
+    
+  //   // 計算選單應該顯示的位置
+  //   const rect = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+  //   const x = e.clientX - rect.left;
+  //   const y = e.clientY - rect.top;
+    
+  //   // 如果父組件提供了處理函數，則調用它
+  //   if (props.onContextMenuEvent) {
+  //     props.onContextMenuEvent({
+  //       visible: true,
+  //       position: { x, y },
+  //       nodeId: id,
+  //       nodeData: nodeInfo
+  //     });
+  //   }
+  // };
+
+  // 處理節點點擊事件
+  // const handleNodeClick = (e, id) => {
+  //   e.stopPropagation();
+  //   if (props.onNodeClick) {
+  //     props.onNodeClick(id);
+  //   }
+  // };
 
   if (!props.tree && !props.newick) return <g />;
 
   var tree = props.tree;
-  if(!tree) tree = new phylotree(props.newick);
-  if(!props.skipPlacement) {
+  if (!tree) tree = new phylotree(props.newick);
+  if (!props.skipPlacement) {
     placenodes(tree, props.internalNodeLabels, props.accessor, props.sort);
   }
 
@@ -293,7 +323,7 @@ function Phylotree(props) {
             traverse(child, true);
           });
         }
-      } else if (collapsedNodes.has(node.unique_id)) {
+      } else if (collapsedNodes && collapsedNodes.has(node.unique_id)) {
         if (node.children) {
           node.children.forEach(child => {
             hiddenNodes.add(child.unique_id);
@@ -312,7 +342,7 @@ function Phylotree(props) {
   function shouldHideInternalNode(nodeId, nodeInfo) {
     let currentNode = nodeInfo.node;
     while (currentNode.parent) {
-      if (collapsedNodes.has(currentNode.parent.unique_id)) {
+      if (collapsedNodes && collapsedNodes.has(currentNode.parent.unique_id)) {
         return true;
       }
       currentNode = currentNode.parent;
@@ -322,11 +352,11 @@ function Phylotree(props) {
 
   function attachTextWidth(node) {
     node.data.text_width = text_width(node.data.name, 14, maxLabelWidth);
-    if(node.children) node.children.forEach(attachTextWidth);
+    if (node.children) node.children.forEach(attachTextWidth);
   }
   attachTextWidth(tree.nodes);
   
-  const sorted_tips = tree.getTips().sort((a,b) => 
+  const sorted_tips = tree.getTips().sort((a, b) => 
     b.data.abstract_x - a.data.abstract_x
   );
 
@@ -334,7 +364,7 @@ function Phylotree(props) {
   if (!props.showLabels) {
     rightmost = actualWidth;
   } else {
-    for(let i=0; i < sorted_tips.length; i++) {
+    for (let i = 0; i < sorted_tips.length; i++) {
       let tip = sorted_tips[i];
       rightmost = actualWidth - tip.data.text_width;
       let scale = rightmost / tip.data.abstract_x;
@@ -344,7 +374,7 @@ function Phylotree(props) {
           this_doesnt_cross = Math.floor(tip_x) < Math.ceil(text_x);
         return this_doesnt_cross;
       }).every(x => x);
-      if(none_cross) break;
+      if (none_cross) break;
     }
   }
 
@@ -356,31 +386,6 @@ function Phylotree(props) {
     .range([props.includeBLAxis ? 60 : 0, actualHeight]),
     color_scale = getColorScale(tree, props.highlightBranches);
 
-  const toggleNode = (nodeData) => {
-    // 先更新 collapsedNodes
-    setCollapsedNodes(prev => {
-      const next = new Set(prev);
-      if (next.has(nodeData.unique_id)) {
-        next.delete(nodeData.unique_id);
-      } else {
-        next.add(nodeData.unique_id);
-      }
-      return next;
-    });
-    // 直接計算新的尺寸
-    const optimalDims = calculateOptimalDimensions(tree, props.showLabels);
-    
-    // 更新尺寸狀態
-    setDimensions(optimalDims);
-    
-    // 通知父組件
-    if (props.onDimensionsChange) {
-      props.onDimensionsChange(optimalDims);
-    }
-  };
-
-  const internalNodes = collectInternalNodes(tree);
-
   const handleLabelChange = (id, newLabel) => {
     const newLabels = new Map(nodeLabels);
     newLabels.set(id, newLabel);
@@ -388,6 +393,7 @@ function Phylotree(props) {
   };
 
   const hiddenBranches = getHiddenBranches(collapsedNodes);
+  const internalNodes = collectInternalNodes(tree);
 
   return (
     <g ref={svgRef} transform={props.transform}>
@@ -423,7 +429,7 @@ function Phylotree(props) {
             tooltip={props.tooltip}
             setTooltip={setTooltip}
             onClick={props.onBranchClick}
-            isCollapsed={collapsedNodes.has(link.target.unique_id)}
+            isCollapsed={collapsedNodes && collapsedNodes.has(link.target.unique_id)}
           />
         ))}
       
@@ -434,11 +440,8 @@ function Phylotree(props) {
             key={`internal-${id}`}
             className="internal-node"
             transform={`translate(${x_scale(nodeInfo.x)},${y_scale(nodeInfo.y)})`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleNode({unique_id: id});
-            }}
-            onContextMenu={(e) => handleNodeContextMenu(e, id, nodeInfo)}
+            onClick={(e) => handleNodeClick(e, id, nodeInfo)} // 改為使用左鍵點擊顯示選單
+            // onContextMenu 事件可以移除
             onMouseEnter={() => setHoveredNode(id)}
             onMouseLeave={() => setHoveredNode(null)}
           >
@@ -463,7 +466,7 @@ function Phylotree(props) {
             id={id}
             x={x_scale(nodeInfo.x)}
             y={y_scale(nodeInfo.y) + 5}
-            isCollapsed={collapsedNodes.has(id)}
+            isCollapsed={collapsedNodes && collapsedNodes.has(id)}
             label={nodeLabels.get(id)}
             onLabelChange={handleLabelChange}
             internalNodeLabels={props.internalNodeLabels}
@@ -485,7 +488,9 @@ Phylotree.defaultProps = {
   sort: null,
   includeBLAxis: false,
   onBranchClick: () => null,
-  onContextMenuEvent: null // 新增的 prop
+  onContextMenuEvent: null,
+  onNodeClick: null,
+  collapsedNodes: new Set()
 };
 
 export default Phylotree;
