@@ -14,6 +14,7 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 
+import ContextMenu from "./ContextMenu.jsx"; // 導入 ContextMenu 組件
 import Phylotree from "./phylotree.jsx";
 
 import "./styles/phylotree.css";
@@ -125,13 +126,22 @@ class PhylotreeApplication extends Component {
     super(props);
     this.state = {
       tree: null,
-      alignTips: "right",
+      alignTips: "left",
       sort: null,
       internal: false,
       clickedBranch: null,
-      newick: ""
+      newick: "",
+      // 添加 contextMenu 狀態
+      contextMenu: {
+        visible: false,
+        position: { x: 0, y: 0 },
+        nodeId: null,
+        nodeData: null
+      }
     };
     this.handleFileChange = this.handleFileChange.bind(this);
+    this.handleContextMenuEvent = this.handleContextMenuEvent.bind(this);
+    this.closeContextMenu = this.closeContextMenu.bind(this);
   }
 
   handleFileChange(event) {
@@ -166,9 +176,33 @@ class PhylotreeApplication extends Component {
     this.setState({alignTips: direction});
   }
 
+  // 處理 ContextMenu 事件
+  handleContextMenuEvent(event) {
+    this.setState({
+      contextMenu: event
+    });
+  }
+
+  // 關閉 ContextMenu
+  closeContextMenu() {
+    this.setState({
+      contextMenu: {
+        ...this.state.contextMenu,
+        visible: false
+      }
+    });
+  }
+
+  // 各種 ContextMenu 操作函數
+  handleCollapseSubtree = () => {
+    console.log("Collapse subtree for node:", this.state.contextMenu.nodeId);
+    this.closeContextMenu();
+  }
+  
+
   render() {
     const { padding } = this.props;
-    const { width, height, clickedBranch } = this.state;
+    const { width, height, clickedBranch, contextMenu } = this.state;
 
     const svgWidth = width + (padding * 4);  // 增加左右邊距
     const svgHeight = height + (padding * 4); // 增加上下邊距
@@ -243,23 +277,43 @@ class PhylotreeApplication extends Component {
           </div> {/*button group container*/}
         </div> {/*phylotree container*/}
       </div>
-      <svg width={svgWidth} height={svgHeight}>
-        {/*這裡呼叫Phylotree，Phylotree會在呼叫Branch*/}
-        <Phylotree
-          width={width}
-          height={height}
-          transform={`translate(${padding * 2}, ${padding * 2})`}
-          newick={this.state.newick}
-          onDimensionsChange={this.handleDimensionsChange}
-          alignTips={this.state.alignTips}
-          sort={this.state.sort}
-          internalNodeLabels={this.state.internal}
-          onBranchClick={branch => {
-            this.setState({clickedBranch: branch.target.data.name})
-          }}
-          includeBLAxis
+      <div className="tree_container" style={{ position: "relative" }}>
+        {/* 在這裡添加 ContextMenu 組件 */}
+        <ContextMenu 
+          visible={contextMenu.visible}
+          position={contextMenu.position}
+          onClose={this.closeContextMenu}
+          onCollapseSubtree={this.handleCollapseSubtree}
+          // onToggleSelection={this.handleToggleSelection}
+          // onSelectDescendants={this.handleSelectDescendants}
+          // onSelectTerminals={this.handleSelectTerminals}
+          // onSelectInternals={this.handleSelectInternals}
+          // onSelectIncident={this.handleSelectIncident}
+          // onSelectPathToRoot={this.handleSelectPathToRoot}
+          // onRerootNode={this.handleRerootNode}
+          // onHideSubtree={this.handleHideSubtree}
         />
-      </svg>
+        
+        <svg width={svgWidth+150} height={svgHeight}>
+          {/*這裡呼叫Phylotree，Phylotree會在呼叫Branch*/}
+          <Phylotree
+            width={width}
+            height={height}
+            transform={`translate(${padding * 2}, ${padding * 2})`}
+            newick={this.state.newick}
+            onDimensionsChange={this.handleDimensionsChange}
+            alignTips={this.state.alignTips}
+            sort={this.state.sort}
+            internalNodeLabels={this.state.internal}
+            onBranchClick={branch => {
+              this.setState({clickedBranch: branch.target.data.name})
+            }}
+            includeBLAxis
+            // 添加 ContextMenu 相關的 props
+            onContextMenuEvent={this.handleContextMenuEvent}
+          />
+        </svg>
+      </div>
       {clickedBranch ? <p>
         Last clicked branch was {clickedBranch}.
       </p> : null}

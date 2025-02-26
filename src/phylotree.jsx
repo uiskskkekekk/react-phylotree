@@ -3,12 +3,11 @@ import { AxisTop } from "d3-react-axis";
 import { scaleLinear, scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import { phylotree } from "phylotree";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import _ from "underscore";
 
 import Branch from "./branch.jsx";
 import text_width from "./text_width";
-
 
 function x_branch_lengths(node, accessor) {
   if (!node.parent) return 0;
@@ -171,7 +170,8 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
       y={y}
       style={{ 
         cursor: 'pointer',
-        fontSize: '16px'
+        fontSize: '16px',
+        userSelect: 'none'
       }}
       onClick={e => e.stopPropagation()} // 防止點擊觸發樹的事件
       onDoubleClick={() => setIsEditing(true)}
@@ -180,8 +180,6 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
     </text>
   );
 }
-
-
 
 function calculateOptimalDimensions(tree) {  //resizing
   // 獲取所有葉節點
@@ -227,6 +225,7 @@ function Phylotree(props) {
   const [nodeLabels, setNodeLabels] = useState(new Map());
   const [dimensions, setDimensions] = useState(null);
   
+  const svgRef = useRef(null);
   const { maxLabelWidth } = props;
 
   useEffect(() => {
@@ -250,6 +249,26 @@ function Phylotree(props) {
     }
   }, [props.tree, props.newick, props.showLabels, collapsedNodes]);
   
+  // 處理節點右鍵點擊顯示選單，現在傳遞給父組件
+  const handleNodeContextMenu = (e, id, nodeInfo) => {
+    e.preventDefault(); // 阻止瀏覽器預設右鍵選單
+    e.stopPropagation();
+    
+    // 計算選單應該顯示的位置
+    const rect = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // 如果父組件提供了處理函數，則調用它
+    if (props.onContextMenuEvent) {
+      props.onContextMenuEvent({
+        visible: true,
+        position: { x, y },
+        nodeId: id,
+        nodeData: nodeInfo
+      });
+    }
+  };
 
   if (!props.tree && !props.newick) return <g />;
 
@@ -289,8 +308,6 @@ function Phylotree(props) {
     traverse(tree.nodes);
     return hiddenNodes;
   }
-
-  const hiddenBranches = getHiddenBranches(collapsedNodes);
 
   function shouldHideInternalNode(nodeId, nodeInfo) {
     let currentNode = nodeInfo.node;
@@ -350,7 +367,6 @@ function Phylotree(props) {
       }
       return next;
     });
-    //****************************************************** it try, but not well
     // 直接計算新的尺寸
     const optimalDims = calculateOptimalDimensions(tree, props.showLabels);
     
@@ -361,7 +377,6 @@ function Phylotree(props) {
     if (props.onDimensionsChange) {
       props.onDimensionsChange(optimalDims);
     }
-    //******************************************************
   };
 
   const internalNodes = collectInternalNodes(tree);
@@ -372,8 +387,10 @@ function Phylotree(props) {
     setNodeLabels(newLabels);
   };
 
+  const hiddenBranches = getHiddenBranches(collapsedNodes);
+
   return (
-    <g transform={props.transform}>
+    <g ref={svgRef} transform={props.transform}>
       {props.includeBLAxis && (
         <g>
           <text
@@ -421,6 +438,7 @@ function Phylotree(props) {
               e.stopPropagation();
               toggleNode({unique_id: id});
             }}
+            onContextMenu={(e) => handleNodeContextMenu(e, id, nodeInfo)}
             onMouseEnter={() => setHoveredNode(id)}
             onMouseLeave={() => setHoveredNode(null)}
           >
@@ -430,7 +448,8 @@ function Phylotree(props) {
                 fill: hoveredNode === id ? 'grey' : '#ffffff',
                 cursor: 'pointer',
                 stroke: "grey",
-                strokeWidth: 1.2
+                strokeWidth: 1.2,
+                zIndex: 10
               }}
             />
           </g>
@@ -455,23 +474,21 @@ function Phylotree(props) {
 }
 
 Phylotree.defaultProps = {
-  width: 500,
-  height: 500,
   showLabels: true,
   skipPlacement: false,
   maxLabelWidth: 20,
-  alignTips: "right",
+  alignTips: "left",
   accessor: default_accessor,
   branchStyler: null,
   labelStyler: null,
   tooltip: null,
   sort: null,
   includeBLAxis: false,
-  onBranchClick: () => null
+  onBranchClick: () => null,
+  onContextMenuEvent: null // 新增的 prop
 };
 
 export default Phylotree;
 export {
   calculateOptimalDimensions, placenodes
 };
-
