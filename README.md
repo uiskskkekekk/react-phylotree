@@ -6,7 +6,7 @@ A resuable React component to build phylogenetic tree visualizations. Under deve
 
 ### Install
 ```
-git clone https://github.com/stephenshank/react-phylotree
+git clone https://github.com/uiskskkekekk/react-phylotree
 cd react-phylotree
 yarn
 ```
