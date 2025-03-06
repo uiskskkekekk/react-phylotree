@@ -135,7 +135,9 @@ class PhylotreeApplication extends Component {
         position: { x: 0, y: 0 },
         nodeId: null,
         nodeData: null
-      }
+      },
+      treeInstance: null,
+      currentThreshold: null
     };
     
     // 綁定方法
@@ -222,6 +224,54 @@ class PhylotreeApplication extends Component {
     this.closeContextMenu();
   }
 
+  handleTreeReady = (tree) => {
+    this.setState({ treeInstance: tree });
+  }
+
+  handleThresholdCollapse = (threshold) => {
+    const { treeInstance, collapsedNodes } = this.state;
+    if (!treeInstance) {
+      console.log("樹實例尚未準備好");
+      return;
+    }
+    
+    // 使用現有的樹實例
+    console.log("閾值:", threshold);
+    
+    // 獲取所有需要折疊的節點 ID
+    const nodesToCollapse = new Set(collapsedNodes);
+    
+    // 自定義遍歷函數
+    const traverseNodes = (node) => {
+      if (!node) return;
+      
+      // 非葉節點且分支長度接近閾值（在某個範圍內）
+      if (node.children && node.children.length > 0) {
+        // 設定一個小的誤差範圍，例如 0.5 或更小
+        const tolerance = 0.5;
+        
+        // 檢查節點是否在目標閾值附近
+        if (Math.abs(node.data.abstract_x - threshold) < tolerance) {
+          console.log("折疊節點:", node.unique_id, "分支長度:", node.data.abstract_x);
+          nodesToCollapse.add(node.unique_id);
+        }
+      }
+      
+      // 遍歷子節點
+      if (node.children) {
+        node.children.forEach(child => traverseNodes(child));
+      }
+    };
+    
+    // 從根節點開始遍歷
+    if (treeInstance.nodes) {
+      traverseNodes(treeInstance.nodes);
+    }
+    
+    // 更新折疊節點集合
+    this.setState({ collapsedNodes: nodesToCollapse });
+  } 
+
   render() {
     const { padding } = this.props;
     const { width, height, clickedBranch, contextMenu, collapsedNodes } = this.state;
@@ -269,7 +319,10 @@ class PhylotreeApplication extends Component {
               
               <input
                 type='checkbox'
-                onChange={() => this.setState({internal: !this.state.internal})}
+                onChange={() => this.setState({ internal: !this.state.internal })}
+                style={{
+                  margin: "0px 3px 0px 10px"
+                }}
               />
               {this.state.internal ? 'Hide' : 'Show'} internal labels
               
@@ -282,6 +335,7 @@ class PhylotreeApplication extends Component {
                   value={width}
                   step="10"
                   onChange={(e) => this.setState({ width: parseInt(e.target.value, 10) })}
+                  style={{ marginTop: 10 }}
                 />
               </div>
 
@@ -327,8 +381,9 @@ class PhylotreeApplication extends Component {
               includeBLAxis
               // 需要保留的 props
               collapsedNodes={this.state.collapsedNodes}
-              // 移除 onNodeClick prop
               onContextMenuEvent={this.handleContextMenuEvent}
+              onTreeReady={this.handleTreeReady}
+              onThresholdCollapse={this.handleThresholdCollapse}
             />
           </svg>
         </div>

@@ -234,6 +234,11 @@ function Phylotree(props) {
     
     if (tree && !props.skipPlacement) {
       placenodes(tree, props.internalNodeLabels, props.accessor, props.sort);
+
+      // 將樹實例傳遞給父組件
+      if (props.onTreeReady) {
+        props.onTreeReady(tree);
+      }
       
       const optimalDims = calculateOptimalDimensions(tree, props.showLabels);
       if (!dimensions || 
@@ -395,6 +400,21 @@ function Phylotree(props) {
   const hiddenBranches = getHiddenBranches(collapsedNodes);
   const internalNodes = collectInternalNodes(tree);
 
+  // 添加新的處理函數，用於處理刻度軸點擊
+  const handleAxisClick = (e) => {
+    // 獲取點擊位置在軸上的數值
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickValue = x_scale.invert(clickX); // 將像素位置轉換為數值
+    
+    console.log("軸上點擊的位置對應的數值:", clickValue);
+    
+    // 調用閾值折疊函數
+    if (props.onThresholdCollapse) {
+      props.onThresholdCollapse(clickValue);
+    }
+  };
+
   return (
     <g ref={svgRef} transform={props.transform}>
       {props.includeBLAxis && (
@@ -406,6 +426,16 @@ function Phylotree(props) {
             textAnchor='middle'
             fontFamily='Courier'
           />
+          {/* 添加一個透明的可點擊層 */}
+          <rect 
+            x={0}
+            y={30}
+            width={rightmost}
+            height={20}
+            fill="transparent"
+            style={{ cursor: 'pointer' }}
+            onClick={handleAxisClick}
+          />          
           <AxisTop transform={`translate(0, 40)`} scale={x_scale} />
         </g>
       )}
