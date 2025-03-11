@@ -1,5 +1,4 @@
 import { max } from "d3-array";
-import { AxisTop } from "d3-react-axis";
 import { scaleLinear, scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import { phylotree } from "phylotree";
@@ -222,6 +221,7 @@ function Phylotree(props) {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [nodeLabels, setNodeLabels] = useState(new Map());
   const [dimensions, setDimensions] = useState(null);
+  const [hoveredTick, setHoveredTick] = useState(null);
   
   const svgRef = useRef(null);
   const { maxLabelWidth, collapsedNodes } = props;
@@ -385,10 +385,10 @@ function Phylotree(props) {
 
   const x_scale = scaleLinear()
     .domain([0, tree.max_x])
-    .range([0, rightmost]),
-  y_scale = scaleLinear()
+    .range([0, rightmost]);
+  const y_scale = scaleLinear()
     .domain([0, tree.max_y])
-    .range([props.includeBLAxis ? 60 : 0, actualHeight]),
+    .range([props.includeBLAxis ? 90 : 0, actualHeight]),
     color_scale = getColorScale(tree, props.highlightBranches);
 
   const handleLabelChange = (id, newLabel) => {
@@ -401,19 +401,19 @@ function Phylotree(props) {
   const internalNodes = collectInternalNodes(tree);
 
   // 添加新的處理函數，用於處理刻度軸點擊
-  const handleAxisClick = (e) => {
-    // 獲取點擊位置在軸上的數值
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickValue = x_scale.invert(clickX); // 將像素位置轉換為數值
+  // const handleAxisClick = (e) => {
+  //   // 獲取點擊位置在軸上的數值
+  //   const rect = e.currentTarget.getBoundingClientRect();
+  //   const clickX = e.clientX - rect.left;
+  //   const clickValue = x_scale.invert(clickX); // 將像素位置轉換為數值
     
-    console.log("軸上點擊的位置對應的數值:", clickValue);
+  //   console.log("軸上點擊的位置對應的數值:", clickValue);
     
-    // 調用閾值折疊函數
-    if (props.onThresholdCollapse) {
-      props.onThresholdCollapse(clickValue);
-    }
-  };
+  //   // 調用閾值折疊函數
+  //   if (props.onThresholdCollapse) {
+  //     props.onThresholdCollapse(clickValue);
+  //   }
+  // };
 
   return (
     <g ref={svgRef} transform={props.transform}>
@@ -425,18 +425,129 @@ function Phylotree(props) {
             alignmentBaseline='middle'
             textAnchor='middle'
             fontFamily='Courier'
+          >
+            Branch Length
+          </text>
+          
+          {/* 繪製軸線 */}
+          <line
+            x1={0}
+            y1={40}
+            x2={rightmost}
+            y2={40}
+            stroke="#aaa"
+            strokeWidth={1}
           />
-          {/* 添加一個透明的可點擊層 */}
-          <rect 
-            x={0}
-            y={30}
-            width={rightmost}
-            height={20}
-            fill="transparent"
-            style={{ cursor: 'pointer' }}
-            onClick={handleAxisClick}
-          />          
-          <AxisTop transform={`translate(0, 40)`} scale={x_scale} />
+          
+          {/* 在刻度處添加節點標記 */}
+          {(() => {
+            // 計算適當的刻度間隔
+            const max = tree.max_x;
+            let interval;
+            
+            if (max === 0) {
+              interval = 0.1;
+            } else {
+              // 獲取數量級（即10的幾次方）
+              const magnitude = Math.floor(Math.log10(max));
+              
+              if (magnitude < -10) {
+                interval = Math.pow(10, magnitude) * 0.1;
+              } else if (magnitude < 0) {
+                interval = Math.pow(10, magnitude);
+                
+                if (max / interval > 10) {
+                  interval *= 2;
+                }
+              } else if (magnitude < 3) {
+                interval = Math.pow(10, Math.floor(Math.log10(max / 10)));
+              } else {
+                interval = Math.pow(10, Math.floor(Math.log10(max / 5)));
+              }
+            }
+            
+            // 確保間隔不會過小導致浮點精度問題
+            if (interval < Number.EPSILON) {
+              interval = Number.EPSILON;
+            }
+            
+            // 確保不會產生過多刻度
+            const estimatedTickCount = max / interval;
+            if (estimatedTickCount > 20) {
+              interval = max / 20;
+            }
+            
+            // 生成刻度點
+            let ticks = [];
+            for (let i = 0; i <= max; i += interval) {
+              // 修正浮點數精度問題
+              const tick = parseFloat(i.toFixed(10));
+              if (tick <= max) {
+                ticks.push(tick);
+              }
+            }
+            
+            // 如果刻度過多，可以限制數量
+            if (ticks.length > 20) {
+              const step = Math.ceil(ticks.length / 20);
+              ticks = ticks.filter((_, i) => i % step === 0);
+            }
+            
+            // 添加最後一個刻度點（最大值）
+            if (ticks[ticks.length - 1] < max) {
+              const precision = interval >= 1 ? 0 :
+                                interval >= 0.1 ? 1 :
+                                interval >= 0.01 ? 2 : 3;
+
+              const roundedMax = Math.ceil(max * Math.pow(10, precision)) / Math.pow(10, precision);
+              ticks.push(roundedMax);
+            }
+            
+            return ticks.map(tick => (
+              <g key={tick} transform={`translate(${x_scale(tick)}, 40)`}>
+                {/* 添加節點形式的標記 */}
+                <circle 
+                  cy={-15}
+                  r={hoveredTick === tick ? 5 : 3}
+                  fill={hoveredTick === tick ? 'grey' : '#ffffff'}
+                  stroke="grey"
+                  strokeWidth={1.2}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredTick(tick)}
+                  onMouseLeave={() => setHoveredTick(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (props.onThresholdCollapse) {
+                      props.onThresholdCollapse(tick);
+                    }
+                  }}
+                />
+                
+                {/* 添加刻度線 */}
+                <line
+                  y1={-11}
+                  y2={5}
+                  stroke="#333"
+                  strokeWidth={1}
+                />
+                
+                {/* 添加刻度值文字 */}
+                <text
+                  y={20}
+                  textAnchor="middle"
+                  fontSize="12px"
+                  fill="#333"
+                >
+                  {/* 根據值的大小決定顯示的小數位數 */}
+                  {/* {tick < 0.1 ? tick.toFixed(3) : 
+                  tick < 1 ? tick.toFixed(2) : 
+                  tick < 10 ? tick.toFixed(1) : 
+                  tick.toFixed(0)} */}
+                  {tick.toString()}
+                </text>
+              </g>
+            ));
+          })()}
         </g>
       )}
 

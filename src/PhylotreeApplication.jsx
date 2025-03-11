@@ -242,24 +242,27 @@ class PhylotreeApplication extends Component {
     const nodesToCollapse = new Set(collapsedNodes);
     
     // 自定義遍歷函數
-    const traverseNodes = (node) => {
+    const traverseNodes = (node, hasParentCollapsed = false) => {
       if (!node) return;
       
-      // 非葉節點且分支長度接近閾值（在某個範圍內）
-      if (node.children && node.children.length > 0) {
-        // 設定一個小的誤差範圍，例如 0.5 或更小
-        const tolerance = 0.5;
-        
-        // 檢查節點是否在目標閾值附近
-        if (Math.abs(node.data.abstract_x - threshold) < tolerance) {
-          console.log("折疊節點:", node.unique_id, "分支長度:", node.data.abstract_x);
-          nodesToCollapse.add(node.unique_id);
+      // 如果父節點已經被折疊，則跳過這個節點的檢查
+      let shouldCollapseThisNode = false;
+      
+      // 只檢查尚未被父節點折疊的節點
+      if (!hasParentCollapsed) {
+        // 非葉節點且分支長度大於等於閾值
+        if (node.children && node.children.length > 0) {
+          if (node.data.abstract_x >= threshold) {
+            console.log("折疊節點:", node.unique_id, "分支長度:", node.data.abstract_x);
+            nodesToCollapse.add(node.unique_id);
+            shouldCollapseThisNode = true;
+          }
         }
       }
       
-      // 遍歷子節點
+      // 遍歷子節點，如果當前節點被折疊，則傳遞 true 給子節點
       if (node.children) {
-        node.children.forEach(child => traverseNodes(child));
+        node.children.forEach(child => traverseNodes(child, hasParentCollapsed || shouldCollapseThisNode));
       }
     };
     
@@ -281,12 +284,12 @@ class PhylotreeApplication extends Component {
 
     return (
       <div style={{display: "flex", flexDirection: "column", alignItems: "flex-start"}}>
-        <h1>React Phylotree</h1>
+        {/* <h1>React Phylotree</h1> */}
         
         <div style={{ display: "flex", justifyContent: "space-around" }}>
           <div className="phylotree-application">
             <div className="file-input-container">
-              <input type="file" accept=".nwk" onChange={this.handleFileChange} />
+              <input type="file" accept=".nwk" onChange={this.handleFileChange} style={{marginTop: "20px"}}/>
             </div>
             
             <div className="button-group-container">
