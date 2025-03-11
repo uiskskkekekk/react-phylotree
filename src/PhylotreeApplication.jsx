@@ -14,6 +14,7 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 
+import ContextMenu from "./ContextMenu.jsx"; // 導入 ContextMenu 組件
 import Phylotree from "./phylotree.jsx";
 
 import "./styles/phylotree.css";
@@ -79,7 +80,6 @@ function VerticalCompressionButton(props) {
   </Button>);
 }
 
-
 function AscendingSortButton(props) {
   return (<Button
     title="Sort in ascending order"
@@ -88,7 +88,6 @@ function AscendingSortButton(props) {
     <FontAwesomeIcon key={1} icon={faSortAmountUp} flip="vertical"/>
   </Button>);
 }
-
 
 function DescendingSortButton(props) {
   return (<Button
@@ -99,7 +98,6 @@ function DescendingSortButton(props) {
   </Button>);
 }
 
-
 function AlignTipsRightButton(props) {   //節點名稱對稱
   return (<Button
     title="Align tips to right"
@@ -108,7 +106,6 @@ function AlignTipsRightButton(props) {   //節點名稱對稱
     <FontAwesomeIcon key={1} icon={faAlignRight}/>
   </Button>);
 }
-
 
 function AlignTipsLeftButton(props) {   //節點名稱貼齊
   return (<Button
@@ -119,23 +116,39 @@ function AlignTipsLeftButton(props) {   //節點名稱貼齊
   </Button>);
 }
 
-
 class PhylotreeApplication extends Component {
   constructor(props) {
     super(props);
     this.state = {
       tree: null,
-      width: 500,
-      height: 500,
-      alignTips: "right",
+      alignTips: "left",
       sort: null,
       internal: false,
       clickedBranch: null,
-      newick: ""
+      newick: "",
+      width: 500,  // 默認寬度
+      height: 500, // 默認高度
+      collapsedNodes: new Set(), // 折疊節點集合
+      // ContextMenu 狀態
+      contextMenu: {
+        visible: false,
+        position: { x: 0, y: 0 },
+        nodeId: null,
+        nodeData: null
+      },
+      treeInstance: null,
+      currentThreshold: null
     };
+    
+    // 綁定方法
     this.handleFileChange = this.handleFileChange.bind(this);
+    this.handleContextMenuEvent = this.handleContextMenuEvent.bind(this);
+    this.closeContextMenu = this.closeContextMenu.bind(this);
+    this.toggleNode = this.toggleNode.bind(this);
+    this.handleCollapseSubtree = this.handleCollapseSubtree.bind(this);
   }
 
+  // 檔案上傳處理
   handleFileChange(event) {
     const file = event.target.files[0];
     if (file) {
@@ -147,73 +160,175 @@ class PhylotreeApplication extends Component {
       reader.readAsText(file);
     }
   }
-  // componentDidMount() {
-  //   text("data/CD2.new")
-  //     .then(newick => {
-  //       this.setState({newick});
-  //     });
-  // }
-  toggleDimension(dimension, direction) {  //調整樹寬樹高
+
+  // 處理尺寸變化
+  handleDimensionsChange = ({ width, height }) => {
+    this.setState({ width, height });
+  }
+
+  // 調整樹寬樹高
+  toggleDimension(dimension, direction) {  
     const new_dimension = this.state[dimension] +
-      (direction == "expand" ? 40 : -40),  //增長或縮短
+      (direction === "expand" ? 40 : -40),  //增長或縮短
       new_state = {};
     new_state[dimension] = new_dimension;
     this.setState(new_state);
   }
 
+  // 處理排序
   handleSort(direction) {
     this.setState({sort: direction});
   }
 
+  // 處理節點對齊
   alignTips(direction) {
     this.setState({alignTips: direction});
   }
 
+  // 處理 ContextMenu 事件
+  handleContextMenuEvent(event) {
+    this.setState({
+      contextMenu: event
+    });
+  }
+
+  // 關閉 ContextMenu
+  closeContextMenu() {
+    this.setState({
+      contextMenu: {
+        ...this.state.contextMenu,
+        visible: false
+      }
+    });
+  }
+
+  // 處理節點的折疊/展開
+  toggleNode(nodeId) {
+    this.setState(prevState => {
+      const collapsedNodes = new Set(prevState.collapsedNodes);
+      if (collapsedNodes.has(nodeId)) {
+        collapsedNodes.delete(nodeId);
+      } else {
+        collapsedNodes.add(nodeId);
+      }
+      return { collapsedNodes };
+    });
+  }
+  
+  // 處理折疊子樹選單項
+  handleCollapseSubtree() {
+    const { nodeId } = this.state.contextMenu;
+    if (nodeId) {
+      this.toggleNode(nodeId);
+    }
+    this.closeContextMenu();
+  }
+
+  handleTreeReady = (tree) => {
+    this.setState({ treeInstance: tree });
+  }
+
+  handleThresholdCollapse = (threshold) => {
+    const { treeInstance, collapsedNodes } = this.state;
+    if (!treeInstance) {
+      console.log("樹實例尚未準備好");
+      return;
+    }
+    
+    // 使用現有的樹實例
+    console.log("閾值:", threshold);
+    
+    // 獲取所有需要折疊的節點 ID
+    const nodesToCollapse = new Set(collapsedNodes);
+    
+    // 自定義遍歷函數
+    const traverseNodes = (node, hasParentCollapsed = false) => {
+      if (!node) return;
+      
+      // 如果父節點已經被折疊，則跳過這個節點的檢查
+      let shouldCollapseThisNode = false;
+      
+      // 只檢查尚未被父節點折疊的節點
+      if (!hasParentCollapsed) {
+        // 非葉節點且分支長度大於等於閾值
+        if (node.children && node.children.length > 0) {
+          if (node.data.abstract_x >= threshold) {
+            console.log("折疊節點:", node.unique_id, "分支長度:", node.data.abstract_x);
+            nodesToCollapse.add(node.unique_id);
+            shouldCollapseThisNode = true;
+          }
+        }
+      }
+      
+      // 遍歷子節點，如果當前節點被折疊，則傳遞 true 給子節點
+      if (node.children) {
+        node.children.forEach(child => traverseNodes(child, hasParentCollapsed || shouldCollapseThisNode));
+      }
+    };
+    
+    // 從根節點開始遍歷
+    if (treeInstance.nodes) {
+      traverseNodes(treeInstance.nodes);
+    }
+    
+    // 更新折疊節點集合
+    this.setState({ collapsedNodes: nodesToCollapse });
+  } 
+
   render() {
     const { padding } = this.props;
-    const { width, height, clickedBranch } = this.state;
-    return (<div style={{display: "flex", flexDirection: "column", alignItems: "flex-start"}}>
-      <h1>React Phylotree</h1>
-      <div style={{ display: "flex", justifyContent: "space-around" }}>
-        <div className="phylotree-application">
-          <div className="file-input-container">
-            <input type="file" accept=".nwk" onChange={this.handleFileChange} />
-            {/* Render the rest of your component here */}
-          </div>
-          <div className="button-group-container">
-            <ButtonGroup>
-              <VerticalExpansionButton
-                onClick={()=>this.toggleDimension("height", "expand")}
+    const { width, height, clickedBranch, contextMenu, collapsedNodes } = this.state;
+
+    const svgWidth = width + (padding * 4);  // 增加左右邊距
+    const svgHeight = height + (padding * 4); // 增加上下邊距
+
+    return (
+      <div style={{display: "flex", flexDirection: "column", alignItems: "flex-start"}}>
+        {/* <h1>React Phylotree</h1> */}
+        
+        <div style={{ display: "flex", justifyContent: "space-around" }}>
+          <div className="phylotree-application">
+            <div className="file-input-container">
+              <input type="file" accept=".nwk" onChange={this.handleFileChange} style={{marginTop: "20px"}}/>
+            </div>
+            
+            <div className="button-group-container">
+              <ButtonGroup>
+                <VerticalExpansionButton
+                  onClick={() => this.toggleDimension("height", "expand")}
+                />
+                <VerticalCompressionButton
+                  onClick={() => this.toggleDimension("height", "compress")}
+                />
+                <HorizontalExpansionButton
+                  onClick={() => this.toggleDimension("width", "expand")}
+                />
+                <HorizontalCompressionButton
+                  onClick={() => this.toggleDimension("width", "compress")}
+                />
+                <AscendingSortButton
+                  onClick={() => this.handleSort("ascending")}
+                />
+                <DescendingSortButton
+                  onClick={() => this.handleSort("descending")}
+                />
+                <AlignTipsLeftButton
+                  onClick={() => this.alignTips("left")}
+                />
+                <AlignTipsRightButton
+                  onClick={() => this.alignTips("right")}
+                />
+              </ButtonGroup>
+              
+              <input
+                type='checkbox'
+                onChange={() => this.setState({ internal: !this.state.internal })}
+                style={{
+                  margin: "0px 3px 0px 10px"
+                }}
               />
-              <VerticalCompressionButton
-                onClick={()=>this.toggleDimension("height", "compress")}
-              />
-              <HorizontalExpansionButton
-                onClick={()=>this.toggleDimension("width", "expand")}
-              />
-              <HorizontalCompressionButton
-                onClick={()=>this.toggleDimension("width", "compress")}
-              />
-              <AscendingSortButton
-                onClick={()=>this.handleSort("ascending")}
-              />
-              <DescendingSortButton
-                onClick={()=>this.handleSort("descending")}
-              />
-              <AlignTipsLeftButton
-                onClick={()=>this.alignTips("left")}
-              />
-              <AlignTipsRightButton
-                onClick={()=>this.alignTips("right")}
-              />
-            </ButtonGroup>
-            <input
-              type='checkbox'
-              onChange={()=>this.setState({internal: !this.state.internal})}
-            />
-            {this.state.internal ? 'Hide' : 'Show'} internal labels
-            {/* <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", gap: "20px" }}> */}
-              {/* 动态调整宽度 */}
+              {this.state.internal ? 'Hide' : 'Show'} internal labels
+              
               <div>
                 <label>Width: {width}px</label>
                 <input
@@ -223,10 +338,10 @@ class PhylotreeApplication extends Component {
                   value={width}
                   step="10"
                   onChange={(e) => this.setState({ width: parseInt(e.target.value, 10) })}
+                  style={{ marginTop: 10 }}
                 />
               </div>
 
-              {/* 动态调整高度 */}
               <div>
                 <label>Height: {height}px</label>
                 <input
@@ -238,30 +353,49 @@ class PhylotreeApplication extends Component {
                   onChange={(e) => this.setState({ height: parseInt(e.target.value, 10) })}
                 />
               </div>
-            {/* </div> */}
-          </div> {/*button group container*/}
-        </div> {/*phylotree container*/}
+            </div> {/*button group container*/}
+          </div> {/*phylotree container*/}
+        </div>
+        
+        <div className="tree_container" style={{ position: "relative" }}>
+          {/* ContextMenu 組件 */}
+          <ContextMenu 
+            visible={contextMenu.visible}
+            position={contextMenu.position}
+            onClose={this.closeContextMenu}
+            onCollapseSubtree={this.handleCollapseSubtree}
+            isNodeCollapsed={contextMenu.isNodeCollapsed}
+          />
+          
+          <svg width={svgWidth+150} height={svgHeight}>
+            {/*這裡呼叫Phylotree*/}
+            <Phylotree
+              width={width}
+              height={height}
+              transform={`translate(${padding * 2}, ${padding * 2})`}
+              newick={this.state.newick}
+              onDimensionsChange={this.handleDimensionsChange}
+              alignTips={this.state.alignTips}
+              sort={this.state.sort}
+              internalNodeLabels={this.state.internal}
+              onBranchClick={branch => {
+                this.setState({clickedBranch: branch.target.data.name})
+              }}
+              includeBLAxis
+              // 需要保留的 props
+              collapsedNodes={this.state.collapsedNodes}
+              onContextMenuEvent={this.handleContextMenuEvent}
+              onTreeReady={this.handleTreeReady}
+              onThresholdCollapse={this.handleThresholdCollapse}
+            />
+          </svg>
+        </div>
+        
+        {clickedBranch ? (
+          <p>Last clicked branch was {clickedBranch}.</p>
+        ) : null}
       </div>
-      <svg width={width} height={height}>
-        {/*這裡呼叫Phylotree，Phylotree會在呼叫Branch*/}
-        <Phylotree
-          width={width-2*padding}
-          height={height-2*padding}
-          transform={`translate(${padding}, ${padding})`}
-          newick={this.state.newick}
-          alignTips={this.state.alignTips}
-          sort={this.state.sort}
-          internalNodeLabels={this.state.internal}
-          onBranchClick={branch => {
-            this.setState({clickedBranch: branch.target.data.name})
-          }}
-          includeBLAxis
-        />
-      </svg>
-      {clickedBranch ? <p>
-        Last clicked branch was {clickedBranch}.
-      </p> : null}
-    </div>);
+    );
   }
 }
 

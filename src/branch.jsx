@@ -21,6 +21,7 @@ function Branch(props) {
     [target_x, target_y]
   ];
 
+
   const branch_line = line().x(d => d[0]).y(d => d[1]);
   
   const computed_branch_styles = props.branchStyler ?
