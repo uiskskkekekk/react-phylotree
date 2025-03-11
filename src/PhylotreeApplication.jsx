@@ -155,7 +155,25 @@ class PhylotreeApplication extends Component {
       const reader = new FileReader();
       reader.onload = (e) => {
         const newick = e.target.result;
-        this.setState({ newick });
+        
+        // this.setState({ newick });
+        this.setState({
+          newick,  // 設置新的 newick 字符串
+          tree: null,  // 重置樹實例
+          treeInstance: null,  // 重置樹實例
+          alignTips: "left",  // 恢復默認對齊
+          sort: null,  // 清除排序
+          internal: false,  // 隱藏內部標簽
+          clickedBranch: null,  // 清除點擊分支
+          collapsedNodes: new Set(),  // 清除所有折疊節點
+          currentThreshold: null,  // 清除當前閾值
+          contextMenu: {  // 重置右鍵菜單
+            visible: false,
+            position: { x: 0, y: 0 },
+            nodeId: null,
+            nodeData: null
+          }
+        });
       };
       reader.readAsText(file);
     }
