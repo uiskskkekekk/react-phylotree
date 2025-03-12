@@ -234,7 +234,7 @@ class PhylotreeApplication extends Component {
   }
   
   // 處理折疊子樹選單項
-  handleCollapseSubtree() {
+  handleCollapseSubtree() {  //single merge
     const { nodeId } = this.state.contextMenu;
     if (nodeId) {
       this.toggleNode(nodeId);
@@ -246,7 +246,7 @@ class PhylotreeApplication extends Component {
     this.setState({ treeInstance: tree });
   }
 
-  handleThresholdCollapse = (threshold) => {
+  handleThresholdCollapse = (threshold) => {  //group merge
     const { treeInstance, collapsedNodes } = this.state;
     if (!treeInstance) {
       console.log("樹實例尚未準備好");
@@ -401,7 +401,7 @@ class PhylotreeApplication extends Component {
               }}
               includeBLAxis
               // 需要保留的 props
-              collapsedNodes={this.state.collapsedNodes}
+              collapsedNodes={this.state.collapsedNodes}  //merge
               onContextMenuEvent={this.handleContextMenuEvent}
               onTreeReady={this.handleTreeReady}
               onThresholdCollapse={this.handleThresholdCollapse}

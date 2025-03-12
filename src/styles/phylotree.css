@@ -33,3 +33,16 @@ path.rp-branch:hover {
 .button-group-container {
   margin: 10px;
 }
+
+circle {
+  fill: #ffffff;
+  cursor: pointer;
+  stroke: grey;
+  stroke-width: 1.2;
+  z-index: 10;
+  transition: 0.2s;
+}
+
+circle.hovered {
+  fill: grey;
+}

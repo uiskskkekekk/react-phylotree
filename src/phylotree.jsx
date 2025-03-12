@@ -8,6 +8,8 @@ import _ from "underscore";
 import Branch from "./branch.jsx";
 import text_width from "./text_width";
 
+import "./styles/phylotree.css";
+
 function x_branch_lengths(node, accessor) {
   if (!node.parent) return 0;
   const bl = accessor(node);
@@ -152,7 +154,7 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
         onBlur={() => setIsEditing(false)}
         onKeyDown={e => {
           if (e.key === 'Enter') {
-            setIsEditing(false); // 按下 Enter 時結束編輯
+            setIsEditing(false); // press Enter to end editing
           }
         }}
         autoFocus
@@ -386,7 +388,7 @@ function Phylotree(props) {
             Branch Length
           </text>
           
-          {/* 繪製軸線 */}
+          {/* 軸線 */}
           <line
             x1={0}
             y1={40}
@@ -466,10 +468,7 @@ function Phylotree(props) {
                 <circle 
                   cy={-15}
                   r={hoveredTick === tick ? 5 : 3}
-                  fill={hoveredTick === tick ? 'grey' : '#ffffff'}
-                  stroke="grey"
-                  strokeWidth={1.2}
-                  style={{ cursor: 'pointer' }}
+                  className={hoveredTick === tick ? "hovered" : ""}
                   onMouseEnter={() => setHoveredTick(tick)}
                   onMouseLeave={() => setHoveredTick(null)}
                   onClick={(e) => {
@@ -534,19 +533,12 @@ function Phylotree(props) {
             className="internal-node"
             transform={`translate(${x_scale(nodeInfo.x)},${y_scale(nodeInfo.y)})`}
             onClick={(e) => handleNodeClick(e, id, nodeInfo)} // 改為使用左鍵點擊顯示選單
-            // onContextMenu 事件可以移除
             onMouseEnter={() => setHoveredNode(id)}
             onMouseLeave={() => setHoveredNode(null)}
           >
             <circle 
               r={hoveredNode === id ? 5 : 3}
-              style={{
-                fill: hoveredNode === id ? 'grey' : '#ffffff',
-                cursor: 'pointer',
-                stroke: "grey",
-                strokeWidth: 1.2,
-                zIndex: 10
-              }}
+              className={hoveredNode === id ? "hovered" : ""}
             />
           </g>
         ))}

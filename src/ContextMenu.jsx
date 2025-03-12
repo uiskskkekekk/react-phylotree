@@ -49,7 +49,6 @@ function ContextMenu({
     borderBottom: '1px solid #eee',
   };
 
-  // 根據節點折疊狀態決定顯示的文字
   const collapseText = isNodeCollapsed ? "Expand Subtree" : "Collapse Subtree";
 
   return (
