@@ -276,34 +276,6 @@ function Phylotree(props) {
     }
   };
   
-  // 處理節點右鍵點擊顯示選單，傳遞給父組件
-  // const handleNodeContextMenu = (e, id, nodeInfo) => {
-  //   e.preventDefault(); // 阻止瀏覽器預設右鍵選單
-  //   e.stopPropagation();
-    
-  //   // 計算選單應該顯示的位置
-  //   const rect = e.currentTarget.ownerSVGElement.getBoundingClientRect();
-  //   const x = e.clientX - rect.left;
-  //   const y = e.clientY - rect.top;
-    
-  //   // 如果父組件提供了處理函數，則調用它
-  //   if (props.onContextMenuEvent) {
-  //     props.onContextMenuEvent({
-  //       visible: true,
-  //       position: { x, y },
-  //       nodeId: id,
-  //       nodeData: nodeInfo
-  //     });
-  //   }
-  // };
-
-  // 處理節點點擊事件
-  // const handleNodeClick = (e, id) => {
-  //   e.stopPropagation();
-  //   if (props.onNodeClick) {
-  //     props.onNodeClick(id);
-  //   }
-  // };
 
   if (!props.tree && !props.newick) return <g />;
 
@@ -399,21 +371,6 @@ function Phylotree(props) {
 
   const hiddenBranches = getHiddenBranches(collapsedNodes);
   const internalNodes = collectInternalNodes(tree);
-
-  // 添加新的處理函數，用於處理刻度軸點擊
-  // const handleAxisClick = (e) => {
-  //   // 獲取點擊位置在軸上的數值
-  //   const rect = e.currentTarget.getBoundingClientRect();
-  //   const clickX = e.clientX - rect.left;
-  //   const clickValue = x_scale.invert(clickX); // 將像素位置轉換為數值
-    
-  //   console.log("軸上點擊的位置對應的數值:", clickValue);
-    
-  //   // 調用閾值折疊函數
-  //   if (props.onThresholdCollapse) {
-  //     props.onThresholdCollapse(clickValue);
-  //   }
-  // };
 
   return (
     <g ref={svgRef} transform={props.transform}>
@@ -538,11 +495,6 @@ function Phylotree(props) {
                   fontSize="12px"
                   fill="#333"
                 >
-                  {/* 根據值的大小決定顯示的小數位數 */}
-                  {/* {tick < 0.1 ? tick.toFixed(3) : 
-                  tick < 1 ? tick.toFixed(2) : 
-                  tick < 10 ? tick.toFixed(1) : 
-                  tick.toFixed(0)} */}
                   {tick.toString()}
                 </text>
               </g>
