@@ -5,7 +5,7 @@ import RBNavbar from "react-bootstrap/Navbar";
 import ReactDOM from "react-dom";
 import { BrowserRouter, Link, Route } from "react-router-dom";
 
-import PhylotreeApplication from "./PhylotreeApplication.jsx";
+import PhylotreeApplication from "./components/PhylotreeApplication.jsx";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Switch } from "react-router-dom/cjs/react-router-dom.min.js";
