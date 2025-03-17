@@ -129,6 +129,7 @@ class PhylotreeApplication extends Component {
       width: 500,  // 默認寬度
       height: 500, // 默認高度
       collapsedNodes: new Set(), // 折疊節點集合
+      renamedNodes: new Map(),
       // ContextMenu 狀態
       contextMenu: {
         visible: false,
@@ -147,6 +148,7 @@ class PhylotreeApplication extends Component {
     this.toggleNode = this.toggleNode.bind(this);
     this.handleCollapseSubtree = this.handleCollapseSubtree.bind(this);
     this.exportModifiedNewick = this.exportModifiedNewick.bind(this);
+    this.handleNodeRename = this.handleNodeRename.bind(this);
   }
 
   // 檔案上傳處理
@@ -167,6 +169,7 @@ class PhylotreeApplication extends Component {
           internal: false,  // 隱藏內部標簽
           clickedBranch: null,  // 清除點擊分支
           collapsedNodes: new Set(),  // 清除所有折疊節點
+          renamedNodes: new Map(),
           currentThreshold: null,  // 清除當前閾值
           contextMenu: {  // 重置右鍵菜單
             visible: false,
@@ -243,11 +246,20 @@ class PhylotreeApplication extends Component {
     this.closeContextMenu();
   }
 
-  handleTreeReady = (tree) => {
-    this.setState({ 
-      treeInstance: tree,
-      // 如果樹實例有 getNewick 方法，可以在這裡保存
+  handleNodeRename = (nodeId, newName) => {
+    console.log(`PhylotreeApplication: 重命名節點 ${nodeId} 為 ${newName}`);
+    
+    this.setState(prevState => {
+      const renamedNodes = new Map(prevState.renamedNodes || new Map());
+      renamedNodes.set(nodeId, newName);
+      return { renamedNodes };
+    }, () => {
+      console.log('更新後的重命名節點:', Array.from(this.state.renamedNodes.entries()));
     });
+  }
+
+  handleTreeReady = (tree) => {
+    this.setState({ treeInstance: tree });
   }
 
   handleThresholdCollapse = (threshold) => {  //group merge
@@ -297,18 +309,14 @@ class PhylotreeApplication extends Component {
     this.setState({ collapsedNodes: nodesToCollapse });
   } 
 
-  // 添加匯出功能
   exportModifiedNewick = () => {
-    const { newick, treeInstance } = this.state;
-  
-    // 優先使用樹實例的轉換方法（如果有的話）
+    const { newick, treeInstance, collapsedNodes, renamedNodes } = this.state;
+    
     let exportNewick = newick; // 預設使用原始 newick 字符串
     
     if (treeInstance && typeof treeInstance.getNewick === 'function') {
-      // 如果樹實例有 getNewick 方法，優先使用它獲取當前樹的結構
       exportNewick = treeInstance.getNewick();
     } else if (treeInstance && treeInstance.export_newick) {
-      // 或者其他可能的方法名稱
       exportNewick = treeInstance.export_newick();
     }
     
@@ -318,6 +326,29 @@ class PhylotreeApplication extends Component {
       return;
     }
     
+    // 處理重命名節點
+    // 這是一個簡化的處理，實際實現可能需要更複雜的解析
+    try {
+      // 輸出調試信息
+      console.log("原始 Newick:", exportNewick);
+      console.log("已折疊節點:", Array.from(collapsedNodes));
+      console.log("已重命名節點:", Array.from(renamedNodes.entries()));
+      
+      // 遍歷所有被折疊且重命名的節點
+      collapsedNodes.forEach(nodeId => {
+        if (renamedNodes.has(nodeId)) {
+          // 取得新名稱
+          const newName = renamedNodes.get(nodeId);
+          console.log(`嘗試處理節點 ${nodeId}，新名稱: ${newName}`);
+          
+          // 這裡需要實現實際的 Newick 字符串修改邏輯
+          // 由於缺乏有關樹結構的詳細信息，這裡只是一個佔位符
+        }
+      });
+    } catch (error) {
+      console.error("處理重命名節點時出錯:", error);
+    }
+  
     // 創建一個下載連結
     const element = document.createElement('a');
     const file = new Blob([exportNewick], {type: 'text/plain'});
@@ -440,9 +471,11 @@ class PhylotreeApplication extends Component {
               includeBLAxis
               // 需要保留的 props
               collapsedNodes={this.state.collapsedNodes}  //merge
+              renamedNodes={this.state.renamedNodes}
               onContextMenuEvent={this.handleContextMenuEvent}
               onTreeReady={this.handleTreeReady}
               onThresholdCollapse={this.handleThresholdCollapse}
+              onNodeRename={this.handleNodeRename}
             />
           </svg>
         </div>

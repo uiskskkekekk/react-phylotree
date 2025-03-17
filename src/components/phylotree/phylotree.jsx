@@ -152,7 +152,7 @@ function Phylotree(props) {
   const [hoveredTick, setHoveredTick] = useState(null);
   
   const svgRef = useRef(null);
-  const { maxLabelWidth, collapsedNodes } = props;
+  const { maxLabelWidth, collapsedNodes, renamedNodes, onNodeRename} = props;
 
   useEffect(() => {
     var tree = props.tree;
@@ -204,6 +204,11 @@ function Phylotree(props) {
     const newLabels = new Map(nodeLabels);
     newLabels.set(id, newLabel);
     setNodeLabels(newLabels);
+    
+    // 把名稱更新給PhylotreeApplication
+    if (props.onNodeRename) {
+      props.onNodeRename(id, newLabel);
+    }
   };
 
   if (!props.tree && !props.newick) return <g />;
@@ -320,6 +325,7 @@ function Phylotree(props) {
             label={nodeLabels.get(id)}
             onLabelChange={handleLabelChange}
             internalNodeLabels={props.internalNodeLabels}
+            onNodeRename={onNodeRename}
           />
         ))}
     </g>
@@ -340,7 +346,9 @@ Phylotree.defaultProps = {
   onBranchClick: () => null,
   onContextMenuEvent: null,
   onNodeClick: null,
-  collapsedNodes: new Set()
+  collapsedNodes: new Set(),
+  renamedNodes: new Map(),
+  onNodeRename: null
 };
 
 export default Phylotree;
