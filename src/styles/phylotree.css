@@ -30,6 +30,19 @@ path.rp-branch:hover {
   margin: 10px; /* Adjust spacing as needed */
 }
 
+.file-input-container button {
+  border-radius: 3px;
+  padding: 1px 10px;
+  border: 1px solid #767676;
+  background-color: #EFEFEF;
+  cursor: pointer;
+}
+
+.file-input-container button:hover{
+  border: 1px solid #505050;
+  background-color: #E5E5E5;
+}
+
 .button-group-container {
   margin: 10px;
 }

@@ -146,6 +146,7 @@ class PhylotreeApplication extends Component {
     this.closeContextMenu = this.closeContextMenu.bind(this);
     this.toggleNode = this.toggleNode.bind(this);
     this.handleCollapseSubtree = this.handleCollapseSubtree.bind(this);
+    this.exportModifiedNewick = this.exportModifiedNewick.bind(this);
   }
 
   // 檔案上傳處理
@@ -243,7 +244,10 @@ class PhylotreeApplication extends Component {
   }
 
   handleTreeReady = (tree) => {
-    this.setState({ treeInstance: tree });
+    this.setState({ 
+      treeInstance: tree,
+      // 如果樹實例有 getNewick 方法，可以在這裡保存
+    });
   }
 
   handleThresholdCollapse = (threshold) => {  //group merge
@@ -293,6 +297,37 @@ class PhylotreeApplication extends Component {
     this.setState({ collapsedNodes: nodesToCollapse });
   } 
 
+  // 添加匯出功能
+  exportModifiedNewick = () => {
+    const { newick, treeInstance } = this.state;
+  
+    // 優先使用樹實例的轉換方法（如果有的話）
+    let exportNewick = newick; // 預設使用原始 newick 字符串
+    
+    if (treeInstance && typeof treeInstance.getNewick === 'function') {
+      // 如果樹實例有 getNewick 方法，優先使用它獲取當前樹的結構
+      exportNewick = treeInstance.getNewick();
+    } else if (treeInstance && treeInstance.export_newick) {
+      // 或者其他可能的方法名稱
+      exportNewick = treeInstance.export_newick();
+    }
+    
+    // 確保有內容可以匯出
+    if (!exportNewick) {
+      alert('No tree data available to export.');
+      return;
+    }
+    
+    // 創建一個下載連結
+    const element = document.createElement('a');
+    const file = new Blob([exportNewick], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = 'exported_tree.nwk';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  }
+
   render() {
     const { padding } = this.props;
     const { width, height, clickedBranch, contextMenu, collapsedNodes } = this.state;
@@ -308,6 +343,9 @@ class PhylotreeApplication extends Component {
           <div className="phylotree-application">
             <div className="file-input-container">
               <input type="file" accept=".nwk" onChange={this.handleFileChange} style={{marginTop: "20px"}}/>
+              <button onClick={this.exportModifiedNewick}>
+                Export
+              </button>
             </div>
             
             <div className="button-group-container">
