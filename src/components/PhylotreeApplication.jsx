@@ -161,7 +161,7 @@ class PhylotreeApplication extends Component {
         
         // this.setState({ newick });
         this.setState({
-          newick,  // 設置新的 newick 字符串
+          newick,  // set new newick string
           tree: null,  // 重置樹實例
           treeInstance: null,  // 重置樹實例
           alignTips: "left",  // 恢復默認對齊
@@ -170,7 +170,6 @@ class PhylotreeApplication extends Component {
           clickedBranch: null,  // 清除點擊分支
           collapsedNodes: new Set(),  // 清除所有折疊節點
           renamedNodes: new Map(),
-          nodeInfoMap: new Map(),
           currentThreshold: null,  // 清除當前閾值
           contextMenu: {  // 重置右鍵菜單
             visible: false,
@@ -225,39 +224,8 @@ class PhylotreeApplication extends Component {
     });
   }
 
-  getAllLeafNames(node) {
-    if (!node.children || node.children.length === 0) {
-      return [node.data.name];
-    }
-    
-    return node.children.flatMap(child => this.getAllLeafNames(child));
-  }
-
   // 處理節點的折疊/展開
   toggleNode(nodeId) {
-    if (!this.state.collapsedNodes.has(nodeId) && this.state.treeInstance) {
-      const node = this.findNodeById(this.state.treeInstance.nodes, nodeId);
-      
-      if (node) {
-        // 獲取第一個和最後一個葉子節點名稱
-        const leafNames = this.getAllLeafNames(node);
-        const firstLeafName = leafNames.length > 0 ? leafNames[0] : null;
-        const lastLeafName = leafNames.length > 0 ? leafNames[leafNames.length - 1] : null;
-        
-        this.setState(prevState => {
-          const nodeInfoMap = new Map(prevState.nodeInfoMap || new Map());
-          nodeInfoMap.set(nodeId, { 
-            firstLeafName,
-            lastLeafName
-          });
-          return { nodeInfoMap };
-        });
-        
-        console.log(`記錄節點 ${nodeId} 的首尾葉子: ${firstLeafName} - ${lastLeafName}`);
-      }
-    }
-    
-    // 原有的折疊邏輯
     this.setState(prevState => {
       const collapsedNodes = new Set(prevState.collapsedNodes);
       if (collapsedNodes.has(nodeId)) {
@@ -283,19 +251,6 @@ class PhylotreeApplication extends Component {
     }
     
     return null;
-  }
-
-  // 輔助方法：找到頂部葉子節點名稱
-  findTopLeafName(node) {
-    if (!node) return null;
-    
-    // 如果是葉子節點，直接返回名稱
-    if (!node.children || node.children.length === 0) {
-      return node.data.name;
-    }
-    
-    // 遞歸找第一個子節點的頂部葉子
-    return this.findTopLeafName(node.children[0]);
   }
   
   // 處理折疊子樹選單項
@@ -370,307 +325,11 @@ class PhylotreeApplication extends Component {
     this.setState({ collapsedNodes: nodesToCollapse });
   } 
 
-
-  // findSubtreeByFirstLeafName = (newickStr, leafName) => {
-  //   // 尋找葉子節點名稱在 Newick 中的位置
-  //   const leafPos = newickStr.indexOf(leafName);
-  //   if (leafPos === -1) {
-  //     console.log(`未找到葉子節點 ${leafName}`);
-  //     return null;
-  //   }
-    
-  //   console.log(`找到葉子節點 ${leafName} 在位置 ${leafPos}`);
-    
-  //   // 向前搜索左括號，找到包含這個葉子的最小子樹
-  //   // 我們需要找到匹配這個葉子的最內層左括號
-  //   let startPos = leafPos;
-  //   while (startPos >= 0 && newickStr[startPos] !== '(') {
-  //     startPos--;
-  //   }
-    
-  //   if (startPos < 0) {
-  //     console.log(`未找到包含葉子節點 ${leafName} 的子樹的開始位置`);
-  //     return null;
-  //   }
-    
-  //   // 從這個位置開始，向前搜索，找到最外層的括號
-  //   // 即找到第一個括號，這個括號前面沒有右括號匹配
-  //   let outerStartPos = startPos;
-  //   let rightCount = 0;  // 右括號計數
-    
-  //   while (outerStartPos > 0) {
-  //     outerStartPos--;
-      
-  //     if (newickStr[outerStartPos] === ')') {
-  //       rightCount++;
-  //     } else if (newickStr[outerStartPos] === '(') {
-  //       if (rightCount === 0) {
-  //         // 找到一個左括號，前面沒有未匹配的右括號
-  //         // 這可能是更外層的括號
-  //         startPos = outerStartPos;
-  //       } else {
-  //         // 找到一個左括號，匹配之前的右括號
-  //         rightCount--;
-  //       }
-  //     }
-      
-  //     // 如果已經到達字符串開頭，或者找到分隔符（如逗號或分號），則停止
-  //     if (outerStartPos === 0 || newickStr[outerStartPos] === ',' || newickStr[outerStartPos] === ';') {
-  //       break;
-  //     }
-  //   }
-    
-  //   console.log(`找到子樹開始位置: ${startPos}`);
-    
-  //   // 從起始左括號位置開始，找到匹配的右括號
-  //   let depth = 1;
-  //   let endPos = startPos + 1;
-    
-  //   while (endPos < newickStr.length && depth > 0) {
-  //     if (newickStr[endPos] === '(') depth++;
-  //     if (newickStr[endPos] === ')') depth--;
-  //     endPos++;
-  //   }
-    
-  //   if (depth !== 0) {
-  //     console.log(`未找到包含葉子節點 ${leafName} 的子樹的結束位置`);
-  //     return null;
-  //   }
-    
-  //   // 繼續向後搜索，直到找到 ',' 或 ';' 或 ')'，以包含分支長度（如果有的話）
-  //   let finalPos = endPos;
-  //   while (finalPos < newickStr.length &&
-  //          newickStr[finalPos] !== ',' &&
-  //          newickStr[finalPos] !== ';' &&
-  //          newickStr[finalPos] !== ')') {
-  //     finalPos++;
-  //   }
-    
-  //   const subtree = newickStr.substring(startPos, finalPos);
-  //   console.log(`找到的子樹: ${subtree}`);
-    
-  //   return {
-  //     subtree: subtree,
-  //     start: startPos,
-  //     end: finalPos
-  //   };
-  // };
-
-  //---------------------------------------------------------------------------
-
-  // 基於首尾葉子名稱找到子樹
-  // findSubtreeByFirstAndLastLeaf = (newickStr, firstLeaf, lastLeaf) => {
-  //   if (!firstLeaf || !lastLeaf) {
-  //     console.log('缺少首尾葉子名稱');
-  //     return null;
-  //   }
-    
-  //   // 尋找包含首尾葉子的子樹
-  //   const firstLeafPos = newickStr.indexOf(firstLeaf);
-  //   const lastLeafPos = newickStr.indexOf(lastLeaf);
-    
-  //   if (firstLeafPos === -1 || lastLeafPos === -1) {
-  //     console.log(`未找到葉子節點: ${firstLeaf} 或 ${lastLeaf}`);
-  //     return null;
-  //   }
-    
-  //   // 確定哪個在前，哪個在後
-  //   const startLeafPos = Math.min(firstLeafPos, lastLeafPos);
-  //   const endLeafPos = Math.max(firstLeafPos, lastLeafPos);
-    
-  //   // 向前搜索左括號
-  //   let startPos = startLeafPos;
-  //   while (startPos >= 0 && newickStr[startPos] !== '(') {
-  //     startPos--;
-  //   }
-    
-  //   if (startPos < 0) {
-  //     console.log('未找到子樹的開始括號');
-  //     return null;
-  //   }
-    
-  //   // 確認這個左括號是否是我們要找的子樹的開始
-  //   // 方法是檢查從這個左括號匹配的右括號是否在最後一個葉子之後
-  //   let depth = 1;
-  //   let tempPos = startPos + 1;
-    
-  //   while (tempPos < newickStr.length && depth > 0) {
-  //     if (newickStr[tempPos] === '(') depth++;
-  //     if (newickStr[tempPos] === ')') depth--;
-  //     tempPos++;
-  //   }
-    
-  //   // 如果匹配的右括號在最後一個葉子之前，則這不是我們要找的子樹
-  //   // 我們需要向前繼續搜索更早的左括號
-  //   if (tempPos <= endLeafPos) {
-  //     console.log('找到的子樹不包含最後一個葉子，繼續搜索');
-      
-  //     // 這裡可以實現更複雜的搜索邏輯
-  //     // 例如，繼續向前搜索直到找到包含兩個葉子的最小子樹
-  //     // 但這可能需要更複雜的算法
-      
-  //     return null;
-  //   }
-    
-  //   // 找到了匹配的右括號，獲取子樹
-  //   // 繼續向後搜索，包含可能的分支長度
-  //   let endPos = tempPos;
-  //   while (endPos < newickStr.length &&
-  //         newickStr[endPos] !== ',' &&
-  //         newickStr[endPos] !== ';' &&
-  //         newickStr[endPos] !== ')') {
-  //     endPos++;
-  //   }
-    
-  //   const subtree = newickStr.substring(startPos, endPos);
-  //   console.log(`找到的子樹: ${subtree}`);
-    
-  //   return {
-  //     subtree: subtree,
-  //     start: startPos,
-  //     end: endPos
-  //   };
-  // };
-
-  // findAndReplaceSubtreeByLastLeaf = (newickStr, lastLeafName, newName) => {
-  //   // 尋找最後一個葉子的位置
-  //   const leafPos = newickStr.indexOf(lastLeafName);
-  //   if (leafPos === -1) {
-  //     console.log(`未找到葉子節點: ${lastLeafName}`);
-  //     return { success: false, newick: newickStr };
-  //   }
-    
-  //   // 從葉子位置向後搜索逗號或分號，計算右括號數量
-  //   let endPos = leafPos + lastLeafName.length;
-  //   let rightBracketCount = 0;
-    
-  //   while (endPos < newickStr.length && 
-  //          newickStr[endPos] !== ',' && 
-  //          newickStr[endPos] !== ';') {
-  //     if (newickStr[endPos] === ')') {
-  //       rightBracketCount++;
-  //     }
-  //     endPos++;
-  //   }
-    
-  //   if (rightBracketCount === 0) {
-  //     console.log(`葉子節點後沒有右括號，不是折疊節點`);
-  //     return { success: false, newick: newickStr };
-  //   }
-    
-  //   // 從葉子位置向前搜索，找到匹配的左括號
-  //   let bracketBalance = rightBracketCount; // 我們需要找到這麼多額外的左括號
-  //   let startPos = leafPos;
-    
-  //   while (startPos >= 0 && bracketBalance > 0) {
-  //     if (newickStr[startPos] === ')') {
-  //       // 遇到右括號，需要多找一個左括號
-  //       bracketBalance++;
-  //     } else if (newickStr[startPos] === '(') {
-  //       // 遇到左括號，減少需要找的數量
-  //       bracketBalance--;
-  //     }
-  //     startPos--;
-  //   }
-    
-  //   if (bracketBalance !== 0) {
-  //     console.log(`未找到足夠的匹配左括號`);
-  //     return { success: false, newick: newickStr };
-  //   }
-    
-  //   // 調整到左括號位置
-  //   startPos++;
-    
-  //   // 提取子樹文本
-  //   const subtree = newickStr.substring(startPos, endPos);
-  //   console.log(`找到的子樹: ${subtree}`);
-    
-  //   // 檢查是否有冒號和引號
-  //   const hasColon = subtree.includes(':');
-  //   const hasDoubleQuote = subtree.includes('"');
-  //   const hasSingleQuote = subtree.includes("'");
-    
-  //   // 提取分支長度（如果有）
-  //   let branchLength = "";
-  //   if (hasColon) {
-  //     const lastRightBracket = subtree.lastIndexOf(')');
-  //     if (lastRightBracket !== -1) {
-  //       const colonPos = subtree.indexOf(':', lastRightBracket);
-  //       if (colonPos !== -1) {
-  //         branchLength = subtree.substring(colonPos);
-  //       }
-  //     }
-  //   }
-    
-  //   // 根據格式生成替換文本
-  //   let replacement;
-  //   if (hasColon) {
-  //     if (hasDoubleQuote || hasSingleQuote) {
-  //       // 保留原有的引號類型
-  //       const quoteChar = hasDoubleQuote ? '"' : "'";
-  //       replacement = `${quoteChar}${newName}${quoteChar}${branchLength}`;
-  //     } else {
-  //       replacement = `${newName}${branchLength}`;
-  //     }
-  //   } else {
-  //     replacement = `(${newName})`;
-  //   }
-    
-  //   // 替換子樹
-  //   const modifiedNewick = 
-  //     newickStr.substring(0, startPos) + 
-  //     replacement + 
-  //     newickStr.substring(endPos);
-    
-  //   console.log(`替換後的 Newick: ${modifiedNewick}`);
-    
-  //   return { 
-  //     success: true, 
-  //     newick: modifiedNewick 
-  //   };
-  // };
-
-  getTopLeafNameForNodeId = (nodeId) => {
-    const { treeInstance } = this.state;
-    
-    if (!treeInstance) return null;
-    
-    // 尋找節點
-    const findNode = (node) => {
-      if (node.unique_id === nodeId) return node;
-      if (node.children) {
-        for (const child of node.children) {
-          const found = findNode(child);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    
-    const node = findNode(treeInstance.nodes);
-    if (!node) return null;
-    
-    // 找到最上面的葉子節點
-    const findTopLeaf = (node) => {
-      if (!node.children || node.children.length === 0) {
-        return node.data.name;
-      }
-      
-      // 假設最上面的葉子是第一個子節點路徑上的叶子
-      return findTopLeaf(node.children[0]);
-    };
-    
-    return findTopLeaf(node);
-  };
-
   convertTreeToNewick = (node, collapsedNodes, renamedNodes, depth = 0) => {
-    // 檢查節點是否被折疊
-    if (node.unique_id && collapsedNodes.has(node.unique_id)) {
-      // 如果節點被折疊且有重命名，使用新名稱
-      if (renamedNodes.has(node.unique_id)) {
+    if (node.unique_id && collapsedNodes.has(node.unique_id)) {   // 節點是否被折疊
+      if (renamedNodes.has(node.unique_id)) {   // 如果節點被折疊且有重命名，使用新名稱
         const newName = renamedNodes.get(node.unique_id);
-        // 是否有分支長度
-        const branchLength = node.data.attribute ? `:${node.data.attribute}` : '';
+        const branchLength = node.data.attribute ? `:${node.data.attribute}` : '';   // 是否有分支長度
         
         // 是否需要引號（如果新名稱包含特殊字符）
         const needQuotes = /[,;:()\[\]]/g.test(newName);
@@ -682,7 +341,7 @@ class PhylotreeApplication extends Component {
       }
     }
     
-    // 如果是葉子節點
+    // 如果是葉子節點（沒有子節點）
     if (!node.children || node.children.length === 0) {
       const name = node.data.name || '';
       const branchLength = node.data.attribute ? `:${node.data.attribute}` : '';
@@ -705,7 +364,7 @@ class PhylotreeApplication extends Component {
     const name = node.data.name || '';
     const branchLength = node.data.attribute ? `:${node.data.attribute}` : '';
     
-    // 根節點特殊處理
+    // 根節點
     if (depth === 0) {
       return `(${childrenNewick})${name}${branchLength};`;
     }
@@ -715,7 +374,7 @@ class PhylotreeApplication extends Component {
   };
 
   exportModifiedNewick = () => {
-    const { treeInstance, collapsedNodes, renamedNodes } = this.state;
+    const { newick, treeInstance, collapsedNodes, renamedNodes } = this.state;
     
     if (!treeInstance) {
       alert('No tree data available to export.');
@@ -724,7 +383,15 @@ class PhylotreeApplication extends Component {
     
     try {
       // 將樹轉換為 Newick 格式，同時處理折疊和重命名的節點
+      console.log("原始 Newick:", newick);
+    
+      console.log("已折疊節點:", Array.from(collapsedNodes));
+      console.log("已重命名節點:", Array.from(renamedNodes.entries()));
+      
+      // 將樹轉換為 Newick 格式，同時處理折疊和重命名的節點
       const exportNewick = this.convertTreeToNewick(treeInstance.nodes, collapsedNodes, renamedNodes);
+      
+      console.log("更新後的 Newick:", exportNewick);
       
       // 創建下載連結
       const element = document.createElement('a');
@@ -739,54 +406,6 @@ class PhylotreeApplication extends Component {
     }
   };
 
-  // exportModifiedNewick = () => {
-  //   const { newick, collapsedNodes, renamedNodes, nodeInfoMap } = this.state;
-    
-  //   let exportNewick = newick;
-    
-  //   // 確保有內容可以匯出
-  //   if (!exportNewick) {
-  //     alert('No tree data available to export.');
-  //     return;
-  //   }
-    
-  //   // 輸出調試信息
-  //   console.log("原始 Newick:", exportNewick);
-  //   console.log("已折疊節點:", Array.from(collapsedNodes));
-  //   console.log("已重命名節點:", Array.from(renamedNodes.entries()));
-    
-  //   try {
-  //     collapsedNodes.forEach(nodeId => {
-  //       if (renamedNodes.has(nodeId)) {
-  //         const newName = renamedNodes.get(nodeId);
-  //         const nodeInfo = nodeInfoMap && nodeInfoMap.get(nodeId);
-          
-  //         if (nodeInfo && nodeInfo.lastLeafName) {
-  //           const result = this.findAndReplaceSubtreeByLastLeaf(
-  //             exportNewick, 
-  //             nodeInfo.lastLeafName, 
-  //             newName
-  //           );
-            
-  //           if (result.success) {
-  //             exportNewick = result.newick;
-  //           }
-  //         }
-  //       }
-  //     });
-  //   } catch (error) {
-  //     console.error("處理過程中出錯:", error);
-  //   }
-
-  //   // 創建下載連結
-  //   const element = document.createElement('a');
-  //   const file = new Blob([exportNewick], {type: 'text/plain'});
-  //   element.href = URL.createObjectURL(file);
-  //   element.download = 'exported_tree.nwk';
-  //   document.body.appendChild(element);
-  //   element.click();
-  //   document.body.removeChild(element);
-  // };
 
   render() {
     const { padding } = this.props;
@@ -898,7 +517,6 @@ class PhylotreeApplication extends Component {
                 this.setState({clickedBranch: branch.target.data.name})
               }}
               includeBLAxis
-              // 需要保留的 props
               collapsedNodes={this.state.collapsedNodes}  //merge
               renamedNodes={this.state.renamedNodes}
               onContextMenuEvent={this.handleContextMenuEvent}
