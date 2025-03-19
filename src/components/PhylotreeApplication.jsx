@@ -128,6 +128,7 @@ class PhylotreeApplication extends Component {
       newick: "",
       width: 500,  // 默認寬度
       height: 500, // 默認高度
+      newickStack: [],
       collapsedNodes: new Set(), // 折疊節點集合
       renamedNodes: new Map(),
       // ContextMenu 狀態
@@ -162,6 +163,7 @@ class PhylotreeApplication extends Component {
         // this.setState({ newick });
         this.setState({
           newick,  // set new newick string
+          newickStack: [],
           tree: null,  // 重置樹實例
           treeInstance: null,  // 重置樹實例
           alignTips: "left",  // 恢復默認對齊
@@ -224,18 +226,70 @@ class PhylotreeApplication extends Component {
     });
   }
 
+  updateTreeAndPushToStack = () => {
+    const { newick, treeInstance, collapsedNodes, renamedNodes } = this.state;
+    
+    if (!treeInstance) {
+      console.log("樹實例尚未準備好");
+      return;
+    }
+    
+    try {
+      // 轉換成 Newick 格式
+      const updatedNewick = this.convertTreeToNewick(treeInstance.nodes, collapsedNodes, renamedNodes);
+      console.log("更新後的 Newick:", updatedNewick);
+      
+      // 將當前 Newick 字符串壓入堆疊
+      this.setState(prevState => ({
+        newickStack: [...prevState.newickStack, prevState.newick],
+        newick: updatedNewick
+      }));
+    } catch (error) {
+      console.error("更新樹時出錯:", error);
+    }
+  }
+
   // 處理節點的折疊/展開
-  toggleNode(nodeId) {
+  toggleNode(nodeId) {  
     this.setState(prevState => {
       const collapsedNodes = new Set(prevState.collapsedNodes);
-      if (collapsedNodes.has(nodeId)) {
+      const isCurrentlyCollapsed = collapsedNodes.has(nodeId);
+      
+      if (isCurrentlyCollapsed) {
+        // 展開節點
         collapsedNodes.delete(nodeId);
+        
+        // 如果有堆疊中的 Newick，則恢復到上一個狀態
+        if (prevState.newickStack.length > 0) {
+          return {
+            collapsedNodes,
+            newick: prevState.newickStack[prevState.newickStack.length - 1],
+            newickStack: prevState.newickStack.slice(0, -1)
+          };
+        }
+        
+        return { collapsedNodes };
       } else {
+        // 折疊節點
         collapsedNodes.add(nodeId);
+        
+        // 如果節點已被重命名，則更新樹並把當前狀態壓入堆疊
+        if (prevState.renamedNodes.has(nodeId)) {
+          // 先只更新折疊狀態，在回調中處理樹的更新
+          return { collapsedNodes };
+        }
+        
+        return { collapsedNodes };
       }
-      return { collapsedNodes };
+    }, () => {
+      // 在折疊一個已重命名的節點時，更新樹並將當前狀態壓入堆疊
+      const nodeId = this.state.contextMenu.nodeId; // 獲取操作的節點 ID
+      if (this.state.collapsedNodes.has(nodeId) && this.state.renamedNodes.has(nodeId)) {
+        this.updateTreeAndPushToStack();
+      }
     });
   }
+  
 
   // 輔助方法：根據ID找節點
   findNodeById(rootNode, nodeId) {
@@ -255,24 +309,64 @@ class PhylotreeApplication extends Component {
   
   // 處理折疊子樹選單項
   handleCollapseSubtree() {  //single merge
-    const { nodeId } = this.state.contextMenu;
+    const { nodeId, isNodeCollapsed } = this.state.contextMenu;
+    
     if (nodeId) {
-      this.toggleNode(nodeId);
+      if (isNodeCollapsed) {
+        // 如果節點已折疊，執行展開操作
+        this.setState(prevState => {
+          const collapsedNodes = new Set(prevState.collapsedNodes);
+          collapsedNodes.delete(nodeId);
+          
+          // 從堆疊中恢復上一個狀態
+          if (prevState.newickStack.length > 0) {
+            return {
+              collapsedNodes,
+              newick: prevState.newickStack[prevState.newickStack.length - 1],
+              newickStack: prevState.newickStack.slice(0, -1)
+            };
+          }
+          
+          return { collapsedNodes };
+        });
+      } else {
+        // 執行折疊操作
+        this.toggleNode(nodeId);
+      }
     }
+    
     this.closeContextMenu();
   }
 
   handleNodeRename = (nodeId, newName) => {
     console.log(`PhylotreeApplication: 重命名節點 ${nodeId} 為 ${newName}`);
     
-    this.setState(prevState => {
-      const renamedNodes = new Map(prevState.renamedNodes || new Map());
-      renamedNodes.set(nodeId, newName);
-      return { renamedNodes };
-    }, () => {
-      console.log('更新後的重命名節點:', Array.from(this.state.renamedNodes.entries()));
-    });
+    // 檢查是否為空字串
+    if (newName.trim() === '') {
+      this.setState(prevState => {
+        const renamedNodes = new Map(prevState.renamedNodes);
+        renamedNodes.delete(nodeId);
+        return { renamedNodes };
+      }, () => {
+        // 處理折疊節點的重命名
+        if (this.state.collapsedNodes.has(nodeId)) {
+          this.updateTreeAndPushToStack();
+        }
+      });
+    } else {
+      this.setState(prevState => {
+        const renamedNodes = new Map(prevState.renamedNodes);
+        renamedNodes.set(nodeId, newName);
+        return { renamedNodes };
+      }, () => {
+        // 處理折疊節點的重命名
+        if (this.state.collapsedNodes.has(nodeId)) {
+          this.updateTreeAndPushToStack();
+        }
+      });
+    }
   }
+  
 
   handleTreeReady = (tree) => {
     this.setState({ treeInstance: tree });
@@ -405,7 +499,6 @@ class PhylotreeApplication extends Component {
       console.error("處理過程中出錯:", error);
     }
   };
-
 
   render() {
     const { padding } = this.props;

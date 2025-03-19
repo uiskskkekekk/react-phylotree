@@ -11,10 +11,11 @@ import React, { useState } from "react";
  * @param {string} props.label - Current label text
  * @param {function} props.onLabelChange - Callback when label changes
  * @param {boolean} props.internalNodeLabels - Whether to show internal node labels
+ * @param {function} props.onNodeRename - Callback when edit is finished
  */
-function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLabels }) {
+function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLabels, onNodeRename }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(label || '');
+  const [tempValue, setTempValue] = useState(''); // 臨時存儲用戶輸入
 
   const adjustedX = internalNodeLabels ? x + 35 : x + 10; // 如果有 internal label 就多移動一些
 
@@ -23,19 +24,21 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
 
   const handleInputChange = (e) => {
     const newValue = e.target.value;
-    setEditValue(newValue);
-
-    if (onLabelChange) {
-      onLabelChange(id, newValue);
-    }
+    setTempValue(newValue); // 只更新臨時值，不觸發 onLabelChange
   }
 
   const finishEditing = () => {
     setIsEditing(false);
-
-    if (onNodeRename && editValue.trim() !== '') {
-      onNodeRename(id, editValue);
-      console.log(`NodeLabel: 調用 onNodeRename(${id}, ${editValue})`);
+    
+    // 更新本地標籤顯示
+    if (onLabelChange) {
+      onLabelChange(id, tempValue);
+    }
+    
+    // 傳遞最終結果給父組件進行正式重命名
+    if (onNodeRename) {
+      onNodeRename(id, tempValue);
+      console.log(`NodeLabel: 調用 onNodeRename(${id}, ${tempValue})`);
     }
   }
 
@@ -49,12 +52,12 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
     >
       <input
         type="text"
-        value={label || ''}
-        onChange={e => onLabelChange(id, e.target.value)}
-        onBlur={() => setIsEditing(false)}
+        value={tempValue}
+        onChange={handleInputChange}
+        onBlur={finishEditing}
         onKeyDown={e => {
           if (e.key === 'Enter') {
-            setIsEditing(false); // press Enter to end editing
+            finishEditing();
           }
         }}
         autoFocus
@@ -76,7 +79,7 @@ function NodeLabel({ id, x, y, isCollapsed, label, onLabelChange, internalNodeLa
       }}
       onClick={e => e.stopPropagation()} // 防止點擊觸發樹的事件
       onDoubleClick={() => {
-        setEditValue(label || '');
+        setTempValue(label || ''); // 初始化臨時值為當前標籤
         setIsEditing(true);
       }}
     >
