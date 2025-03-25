@@ -25,7 +25,7 @@ function x_no_branch_lengths(node) {
 }
 
 function default_accessor(node) {
-  return +node.data.attribute;
+  return +node.data.attribute;  //「+」的作用是將其後面的node.data.attribute轉換為數字
 }
 
 function sort_nodes(tree, direction) {
@@ -36,7 +36,9 @@ function sort_nodes(tree, direction) {
     }
     n["count_depth"] = d;
   });
+
   const asc = direction === "ascending";
+
   tree.resortChildren(function(a, b) {
     return (a["count_depth"] - b["count_depth"]) * (asc ? 1 : -1);
   });
@@ -44,12 +46,14 @@ function sort_nodes(tree, direction) {
 
 function placenodes(tree, perform_internal_layout, accessor, sort) {
   accessor = accessor || default_accessor;
-  if (sort) {
+
+  if (sort) {  //sort內容( ascending:升序 || descending:降序 )
     sort_nodes(tree, sort);
   }
-  var current_leaf_height = -1,
-    unique_id = 0;
+
+  var current_leaf_height = -1, unique_id = 0;
   tree.max_x = 0;
+  
   const has_branch_lengths = Boolean(accessor(tree.getTips()[0])),
     x_branch_length = has_branch_lengths ? x_branch_lengths : x_no_branch_lengths;
   
