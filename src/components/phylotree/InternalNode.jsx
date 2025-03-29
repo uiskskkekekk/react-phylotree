@@ -2,7 +2,7 @@ import React from "react";
 
 /**
  * InternalNode component for rendering internal nodes of phylogenetic tree
- * 
+ *
  * @param {Object} props - Component properties
  * @param {string} props.id - Unique identifier for the node
  * @param {number} props.x - X coordinate
@@ -12,14 +12,14 @@ import React from "react";
  * @param {function} props.onMouseEnter - Callback when mouse enters node
  * @param {function} props.onMouseLeave - Callback when mouse leaves node
  */
-function InternalNode({ 
-  id, 
-  x, 
-  y, 
-  isHovered, 
-  onNodeClick, 
-  onMouseEnter, 
-  onMouseLeave 
+function InternalNode({
+  id,
+  x,
+  y,
+  isHovered,
+  onNodeClick,
+  onMouseEnter,
+  onMouseLeave,
 }) {
   return (
     <g
@@ -29,10 +29,19 @@ function InternalNode({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <circle 
-        r={isHovered ? 5 : 3}
-        className={isHovered ? "hovered" : ""}
-      />
+      <circle r={isHovered ? 5 : 3} className={isHovered ? "hovered" : ""} />
+
+      <text
+        x="8"
+        y="4"
+        fill="red"
+        style={{
+          fontSize: "10px",
+          fontWeight: "bold",
+        }}
+      >
+        {id}
+      </text>
     </g>
   );
 }
