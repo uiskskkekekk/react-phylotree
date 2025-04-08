@@ -72,6 +72,7 @@ function placenodes(
       : x_no_branch_lengths;
 
   // 第一階段：計算節點位置，為葉節點分配普通的unique_id
+  //未勾選show internal labels
   function node_layout(node) {
     // 只為葉節點分配遞增ID
     if (!node.children || node.children.length === 0) {
@@ -90,6 +91,7 @@ function placenodes(
     return node.data.abstract_y;
   }
 
+  //勾選show internal labels
   function internal_node_layout(node) {
     // 只為葉節點分配遞增ID
     if (!node.children || node.children.length === 0) {
@@ -142,29 +144,40 @@ function placenodes(
     if (!node) return;
 
     // 建立一個函數檢查節點ID是否在已收合的子節點列表中
-    const isNodeInMergedChildren = (node) => {
-      // 檢查這個節點是否是某個收合節點的子節點
-      if (!mergedNodes || Object.keys(mergedNodes).length === 0) return false;
+    // const isNodeInMergedChildren = (node) => {
+    //   // 檢查這個節點是否是某個收合節點的子節點
+    //   if (!mergedNodes || Object.keys(mergedNodes).length === 0) return false;
 
-      for (const [mergedNodeId, childrenSet] of Object.entries(mergedNodes)) {
-        if (childrenSet && childrenSet.has && childrenSet.has(node.unique_id)) {
-          return true; // 這個節點是某個收合節點的子節點
-        }
-      }
-      return false;
-    };
+    //   // for (const [childrenSet] of Object.entries()) {
+    //   //   if (childrenSet && childrenSet.has && childrenSet.has(node.unique_id)) {
+    //   //     return true; // 這個節點是某個收合節點的子節點
+    //   //   }
+    //   // }
+    //   for (const mergedInfo of Object.values(mergedNodes)) {
+    //     if (
+    //       mergedInfo.children &&
+    //       mergedInfo.children.has &&
+    //       mergedInfo.children.has(node.unique_id)
+    //     ) {
+    //       console.log("完全沒有進來");
+    //       return true; // 這個節點是某個收合節點的子節點
+    //     }
+    //   }
+    //   return false;
+    // };
 
     // 只處理內部節點（有子節點的節點）
-    // 且這個節點不是任何收合節點的子節點
-    if (
-      node.children &&
-      node.children.length > 0 &&
-      !isNodeInMergedChildren(node)
-    ) {
+    if (node.children && node.children.length > 0) {
+      // if (
+      //   node.children &&
+      //   node.children.length > 0 &&
+      //   !isNodeInMergedChildren(node)
+      // ) {
+
       // 使用 abstract_x 值作為 threshold
       const threshold = node.data.abstract_x;
 
-      // 初始化該 threshold 的數組
+      // 尚未出現過的thershold，初始化該 threshold 的數組
       if (!thresholdGroups.has(threshold)) {
         thresholdGroups.set(threshold, []);
       }
@@ -193,10 +206,24 @@ function placenodes(
   }
 
   // 日誌輸出檢查分配的ID
-  console.log(
-    "已分配穩定ID的內部節點組:",
-    Array.from(thresholdGroups.entries())
-  );
+  // console.log(
+  //   "已分配穩定ID的內部節點組:",
+  //   Array.from(thresholdGroups.entries())
+  // );
+  // const allNodeIds = [];
+  // tree.traverse_and_compute((node) => {
+  //   if (node.unique_id !== undefined) {
+  //     allNodeIds.push({
+  //       id: node.unique_id,
+  //       name: node.data.name || "unnamed",
+  //       isLeaf: !node.children || node.children.length === 0,
+  //       x: node.data.abstract_x,
+  //       y: node.data.abstract_y,
+  //     });
+  //   }
+  //   return true;
+  // });
+  // console.log("所有節點的ID:", allNodeIds);
 }
 
 function getColorScale(tree, highlightBranches) {
@@ -260,7 +287,13 @@ function Phylotree(props) {
     }
 
     if (tree && !props.skipPlacement) {
-      placenodes(tree, props.internalNodeLabels, props.accessor, props.sort);
+      placenodes(
+        tree,
+        props.internalNodeLabels,
+        props.accessor,
+        props.sort,
+        props.merged
+      );
 
       if (props.onTreeReady) {
         props.onTreeReady(tree);
@@ -279,13 +312,13 @@ function Phylotree(props) {
       }
     }
   }, [
-    props.tree,
+    // props.tree,
     props.newick,
     props.showLabels,
     collapsedNodes,
-    props.internalNodeLabels,
-    props.accessor,
-    props.sort,
+    // props.internalNodeLabels,
+    // props.accessor,
+    // props.sort,
     props.onDimensionsChange,
     dimensions,
   ]);
@@ -327,7 +360,13 @@ function Phylotree(props) {
   var tree = props.tree;
   if (!tree) tree = new phylotree(props.newick);
   if (!props.skipPlacement) {
-    placenodes(tree, props.internalNodeLabels, props.accessor, props.sort);
+    placenodes(
+      tree,
+      props.internalNodeLabels,
+      props.accessor,
+      props.sort,
+      props.merged
+    );
   }
 
   const actualWidth = props.width || (dimensions ? dimensions.width : 500);
