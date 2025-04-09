@@ -5,3 +5,4 @@ node_modules
 tags*
 yarn-error.log
 code_review.jsx
+.qodo

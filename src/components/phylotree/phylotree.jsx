@@ -48,6 +48,8 @@ function sort_nodes(tree, direction) {
   });
 }
 
+let persistentThresholdIdMap = {};
+
 function placenodes(
   tree,
   perform_internal_layout,
@@ -143,37 +145,8 @@ function placenodes(
   function collectInternalNodesForGroup(node) {
     if (!node) return;
 
-    // 建立一個函數檢查節點ID是否在已收合的子節點列表中
-    // const isNodeInMergedChildren = (node) => {
-    //   // 檢查這個節點是否是某個收合節點的子節點
-    //   if (!mergedNodes || Object.keys(mergedNodes).length === 0) return false;
-
-    //   // for (const [childrenSet] of Object.entries()) {
-    //   //   if (childrenSet && childrenSet.has && childrenSet.has(node.unique_id)) {
-    //   //     return true; // 這個節點是某個收合節點的子節點
-    //   //   }
-    //   // }
-    //   for (const mergedInfo of Object.values(mergedNodes)) {
-    //     if (
-    //       mergedInfo.children &&
-    //       mergedInfo.children.has &&
-    //       mergedInfo.children.has(node.unique_id)
-    //     ) {
-    //       console.log("完全沒有進來");
-    //       return true; // 這個節點是某個收合節點的子節點
-    //     }
-    //   }
-    //   return false;
-    // };
-
     // 只處理內部節點（有子節點的節點）
-    if (node.children && node.children.length > 0) {
-      // if (
-      //   node.children &&
-      //   node.children.length > 0 &&
-      //   !isNodeInMergedChildren(node)
-      // ) {
-
+    if (!tree.isLeafNode(node)) {
       // 使用 abstract_x 值作為 threshold
       const threshold = node.data.abstract_x;
 
@@ -195,14 +168,95 @@ function placenodes(
   // 從根節點開始收集
   collectInternalNodesForGroup(tree.nodes);
 
-  // 對每個 threshold 組內的節點按 y 值排序
-  for (const [threshold, nodes] of thresholdGroups.entries()) {
-    nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
+  // 還沒有任何merged（樹是完整狀態，first render即可）
+  if (Object.keys(mergedNodes).length === 0) {
+    persistentThresholdIdMap = {};
+  }
 
-    // 為排序後的內部節點分配穩定ID
-    nodes.forEach((node, index) => {
-      node.unique_id = `${threshold}-${index}`;
+  tree.thresholdIdMap = persistentThresholdIdMap;
+  const isFirstRender = Object.keys(tree.thresholdIdMap).length === 0;
+
+  if (isFirstRender) {
+    // 對每個 threshold 組內的節點按 y 值排序
+    for (const [threshold, nodes] of thresholdGroups.entries()) {
+      nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
+
+      // 為排序後的內部節點分配穩定ID
+      nodes.forEach((node, index) => {
+        node.unique_id = `${threshold}-${index}`;
+      });
+    }
+
+    const thresholdIdMap = {};
+
+    tree.traverse_and_compute((node) => {
+      if (!tree.isLeafNode(node) && typeof node.unique_id === "string") {
+        const idStr = String(node.unique_id);
+        const [threshold] = idStr.split("-");
+
+        // Init threshold array
+        if (!thresholdIdMap[threshold]) {
+          thresholdIdMap[threshold] = [];
+        }
+
+        thresholdIdMap[threshold].push(node.unique_id);
+      }
+      // }
+      return true;
     });
+
+    persistentThresholdIdMap = thresholdIdMap;
+  } else {
+    //收集merged中所有subNode
+    const mergedChildrenIds = new Set();
+    for (const mergedInfo of Object.values(mergedNodes)) {
+      if (mergedInfo.children) {
+        // 將所有子樹ID添加到集合中
+        for (const childId of mergedInfo.children) {
+          mergedChildrenIds.add(childId);
+        }
+      }
+    }
+
+    const currentThresholdGroups = new Map();
+
+    tree.traverse_and_compute((node) => {
+      if (!tree.isLeafNode(node) && !mergedChildrenIds.has(node.unique_id)) {
+        const threshold = node.data.abstract_x;
+
+        if (!currentThresholdGroups.has(threshold)) {
+          currentThresholdGroups.set(threshold, []);
+        }
+
+        currentThresholdGroups.get(threshold).push(node);
+      }
+      return true;
+    });
+
+    // 為每個threshold組中的節點分配ID，保留原有ID模式
+    for (const [threshold, nodes] of currentThresholdGroups.entries()) {
+      // 按y值排序
+      nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
+
+      // 獲取該threshold下的原有ID列表
+      const originalIds = tree.thresholdIdMap[threshold] || [];
+
+      // 跳過在mergedChildrenIds中的ID
+      const availableIds = originalIds.filter(
+        (id) => !mergedChildrenIds.has(id)
+      );
+
+      // 為節點分配ID，使用可用的原有ID
+      nodes.forEach((node, index) => {
+        if (index < availableIds.length) {
+          node.unique_id = availableIds[index];
+        } //else {
+        //   // 如果需要更多ID（比如unmerge後出現新節點），生成新的ID
+        //   const newIndex = originalIds.length + (index - availableIds.length);
+        //   node.unique_id = `${threshold}-${newIndex}`;
+        // }
+      });
+    }
   }
 
   // 日誌輸出檢查分配的ID
@@ -312,13 +366,13 @@ function Phylotree(props) {
       }
     }
   }, [
-    // props.tree,
+    props.tree,
     props.newick,
     props.showLabels,
     collapsedNodes,
-    // props.internalNodeLabels,
-    // props.accessor,
-    // props.sort,
+    props.internalNodeLabels,
+    props.accessor,
+    props.sort,
     props.onDimensionsChange,
     dimensions,
   ]);
@@ -359,6 +413,7 @@ function Phylotree(props) {
 
   var tree = props.tree;
   if (!tree) tree = new phylotree(props.newick);
+
   if (!props.skipPlacement) {
     placenodes(
       tree,
