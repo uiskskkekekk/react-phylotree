@@ -207,19 +207,67 @@ function placenodes(
 
     persistentThresholdIdMap = thresholdIdMap;
   } else {
-    //收集merged中所有subNode
+    const allNodeIds = [];
+    tree.traverse_and_compute((node) => {
+      // if (node.unique_id !== undefined) {
+      allNodeIds.push({
+        id: node.unique_id,
+        name: node.data.name || "unnamed",
+        isLeaf: !node.children || node.children.length === 0,
+        x: node.data.abstract_x,
+        y: node.data.abstract_y,
+      });
+      // }
+      return true;
+    });
+    console.log("所有節點的ID:", allNodeIds);
+
+    //收集merged中所有 merged node 和 subNode
     const mergedChildrenIds = new Set();
-    for (const mergedInfo of Object.values(mergedNodes)) {
+    const mergedIds = [];
+
+    for (const mergedId in mergedNodes) {
+      // 將標頭 ID 存入 mergedIds
+      mergedIds.push(mergedId);
+
+      // 處理子節點
+      const mergedInfo = mergedNodes[mergedId];
       if (mergedInfo.children) {
-        // 將所有子樹ID添加到集合中
+        // 將所有子樹 ID 添加到集合中
         for (const childId of mergedInfo.children) {
           mergedChildrenIds.add(childId);
         }
       }
     }
+    console.log(mergedIds);
 
     const currentThresholdGroups = new Map();
 
+    //** ideal **
+
+    // tree.traverse_and_compute((node) => {
+    //   // console.log(Object.values(tree.thresholdIdMap));
+    //   if (
+    //     tree.thresholdIdMap &&
+    //     Object.values(tree.thresholdIdMap).includes(node.unique_id) &&
+    //     mergedIds.includes(  node.unique_id)  // thresholdIdsMap有（總共有的threshold）&& mergedIds也有（所有merged的節點）
+    //   ) {
+    //     console.log(node.unique_id);
+    //   }
+    //   return true;
+    // });
+    // node.unique_id === undefined
+    // => 沒辦法依threshold找到應該設為isLeafNode = false的節點
+
+    // 先賦予一次threshold
+    /* 
+    mergedIds = {
+      '9-3' : { parent : '8-3', isUpSubtree : true }
+      '7-1' : { parent : '6-0', isUpSubtree : false }
+    }
+    */
+
+    // 收集所有要被分配threshold id的node
     tree.traverse_and_compute((node) => {
       if (!tree.isLeafNode(node) && !mergedChildrenIds.has(node.unique_id)) {
         const threshold = node.data.abstract_x;
@@ -232,6 +280,15 @@ function placenodes(
       }
       return true;
     });
+
+    /**
+     * 目前問題：
+     * traverse_and_compute 的 node.unique_id 是 undefined
+     * mergedChildrenIds.has(node.unique_id) 是 true 的情況下只有是在裡面但是是常數的時候 undefined都是false
+     * undefined是因為上面會跳過內部節點只幫外部節點新增id
+     */
+
+    // console.log("currentThresholdGroups: ");
 
     // 為每個threshold組中的節點分配ID，保留原有ID模式
     for (const [threshold, nodes] of currentThresholdGroups.entries()) {
@@ -249,7 +306,7 @@ function placenodes(
       // 為節點分配ID，使用可用的原有ID
       nodes.forEach((node, index) => {
         if (index < availableIds.length) {
-          node.unique_id = availableIds[index];
+          node.unique_id = String(availableIds[index]);
         } //else {
         //   // 如果需要更多ID（比如unmerge後出現新節點），生成新的ID
         //   const newIndex = originalIds.length + (index - availableIds.length);

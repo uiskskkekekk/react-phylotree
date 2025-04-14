@@ -258,6 +258,8 @@ class PhylotreeApplication extends Component {
         const node = findNode(nodeId, this.state.treeInstance.nodes);
 
         if (node) {
+          const [child1, child2] = node.parent.children;
+
           const childrenIds = new Set();
           const collectChildrenIds = (childNode) => {
             if (!childNode) return;
@@ -287,6 +289,8 @@ class PhylotreeApplication extends Component {
                 children: childrenIds,
                 subtreeNewick: getSubtreeNewick(node),
                 rename: newName,
+                parent: node.parent.unique_id,
+                isUpSubtree: node.unique_id === child1.unique_id,
               };
               console.log(merged);
 
@@ -321,7 +325,7 @@ class PhylotreeApplication extends Component {
         collapsedNodes,
         renamedNodes
       );
-      console.log("更新後的 Newick:", updatedNewick);
+      // console.log("更新後的 Newick:", updatedNewick);
 
       this.setState({ newick: updatedNewick });
     } catch (error) {

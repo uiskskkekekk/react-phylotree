@@ -4,39 +4,45 @@ import { line } from "d3-shape";
 
 function Branch(props) {
   // const [isHovered, setIsHovered] = React.useState(false);
-  const { xScale, yScale, colorScale, showLabel, setTooltip, isCollapsed } = props;
+  const { xScale, yScale, colorScale, showLabel, setTooltip, isCollapsed } =
+    props;
   const { source, target } = props.link;
-  
+
   const source_x = xScale(source.data.abstract_x);
   const source_y = yScale(source.data.abstract_y);
   const target_x = xScale(target.data.abstract_x);
   const target_y = yScale(target.data.abstract_y);
-  const tracer_x2 = props.alignTips == "right" ?
-    props.width - (target.data.text_width || 0) :
-    target_x;
-  
+  const tracer_x2 =
+    props.alignTips == "right"
+      ? props.width - (target.data.text_width || 0)
+      : target_x;
+
   const data = [
     [source_x, source_y],
-    [source_x, target_y], 
-    [target_x, target_y]
+    [source_x, target_y],
+    [target_x, target_y],
   ];
 
+  const branch_line = line()
+    .x((d) => d[0])
+    .y((d) => d[1]);
 
-  const branch_line = line().x(d => d[0]).y(d => d[1]);
-  
-  const computed_branch_styles = props.branchStyler ?
-    props.branchStyler(target.data) :
-    target.data.annotation && colorScale ? {
-      stroke: colorScale(target.data.annotation)
-    } : {};
+  const computed_branch_styles = props.branchStyler
+    ? props.branchStyler(target.data)
+    : target.data.annotation && colorScale
+    ? {
+        stroke: colorScale(target.data.annotation),
+      }
+    : {};
 
   const all_branch_styles = Object.assign(
-    {}, props.branchStyle, computed_branch_styles
+    {},
+    props.branchStyle,
+    computed_branch_styles
   );
 
-  const label_style = target.data.name && props.labelStyler ?
-    props.labelStyler(target.data) : {};
-  
+  const label_style =
+    target.data.name && props.labelStyler ? props.labelStyler(target.data) : {};
 
   return (
     <g className="node">
@@ -46,13 +52,17 @@ function Branch(props) {
         d={branch_line(data)}
         onClick={() => props.onClick(props.link)}
         {...all_branch_styles}
-        onMouseMove={props.tooltip ? e => {
-          setTooltip({
-            x: e.nativeEvent.offsetX,
-            y: e.nativeEvent.offsetY,
-            data: target.data
-          });
-        } : undefined}
+        onMouseMove={
+          props.tooltip
+            ? (e) => {
+                setTooltip({
+                  x: e.nativeEvent.offsetX,
+                  y: e.nativeEvent.offsetY,
+                  data: target.data,
+                });
+              }
+            : undefined
+        }
         onMouseOut={props.tooltip ? () => setTooltip(false) : undefined}
       />
 
@@ -84,10 +94,9 @@ function Branch(props) {
 Branch.defaultProps = {
   branchStyle: {
     strokeWidth: 2,
-    stroke: "grey"
+    stroke: "grey",
   },
-  labelStyle: {
-  }
-}
+  labelStyle: {},
+};
 
 export default Branch;
