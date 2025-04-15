@@ -102,6 +102,7 @@ export function getHiddenBranches(tree, collapsedNodes) {
  * @returns {boolean} - 是否應該隱藏
  */
 export function shouldHideInternalNode(nodeId, nodeInfo, collapsedNodes) {
+  // 首先检查是否有折叠的父节点
   if (!collapsedNodes || collapsedNodes.size === 0) {
     return false;
   }
@@ -113,9 +114,14 @@ export function shouldHideInternalNode(nodeId, nodeInfo, collapsedNodes) {
     }
     currentNode = currentNode.parent;
   }
+
+  // 如果启用了隐藏非叶子节点的选项，且当前节点不是叶子节点，则隐藏
+  // if (!nodeInfo.node.children) {
+  //   return true;
+  // }
+
   return false;
 }
-
 /**
  * 按指定閾值折疊樹的分支
  *
