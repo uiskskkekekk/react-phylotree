@@ -115,10 +115,10 @@ export function shouldHideInternalNode(nodeId, nodeInfo, collapsedNodes) {
     currentNode = currentNode.parent;
   }
 
-  // 如果启用了隐藏非叶子节点的选项，且当前节点不是叶子节点，则隐藏
-  // if (!nodeInfo.node.children) {
-  //   return true;
-  // }
+  //如果启用了隐藏非叶子节点的选项，且当前节点不是叶子节点，则隐藏
+  if (!nodeInfo.node.children) {
+    return true;
+  }
 
   return false;
 }

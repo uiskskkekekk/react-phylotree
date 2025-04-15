@@ -304,23 +304,16 @@ function placenodes(
 
     // 处理排序后的mergedIds
     for (const [mergedId, mergedInfo] of sortedMergedIds) {
-      // 找到parent节点
       const parentNode = findNodeById(mergedInfo.parent);
 
       if (parentNode) {
-        // 找到parent的两个子节点
         const siblings = parentNode.children;
-        console.log(mergedInfo);
-        console.log(siblings);
-        console.log(mergedInfo.siblingIndex);
 
-        // 根据isUpSubtree找到对应的节点
-        console.log(siblings[mergedInfo.siblingIndex]);
+        // 跟據siblingIndex找到對應子節點
         const nodeToModify = siblings[mergedInfo.siblingIndex];
 
-        // 如果找到节点，将其isLeafNode设为false
         if (nodeToModify) {
-          // 假设tree有一个方法来设置节点的leaf状态
+          // 將 merged 節點 isLeafNode 設為 false ，並重新賦予一次 threshold id
           setNodeAsNonLeaf(tree, nodeToModify);
           currentThresholdGroups = new Map();
 
@@ -636,9 +629,13 @@ function Phylotree(props) {
 
       {tree.links
         .filter((link) => !hiddenBranches.has(link.target.unique_id))
-        .map((link) => (
+        .map((link, index) => (
           <Branch
-            key={`${link.source.unique_id},${link.target.unique_id}`}
+            key={
+              link.source.unique_id && link.target.unique_id
+                ? `${link.source.unique_id},${link.target.unique_id}`
+                : `branch-${index}`
+            }
             xScale={x_scale}
             yScale={y_scale}
             colorScale={color_scale}
