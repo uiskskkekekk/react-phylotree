@@ -137,7 +137,7 @@ class PhylotreeApplication extends Component {
     this.handleFileChange = this.handleFileChange.bind(this);
     this.handleContextMenuEvent = this.handleContextMenuEvent.bind(this);
     this.closeContextMenu = this.closeContextMenu.bind(this);
-    this.toggleNode = this.toggleNode.bind(this);
+    // this.toggleNode = this.toggleNode.bind(this);
     this.handleCollapseSubtree = this.handleCollapseSubtree.bind(this);
     this.exportModifiedNewick = this.exportModifiedNewick.bind(this);
     this.handleNodeRename = this.handleNodeRename.bind(this);
@@ -298,7 +298,6 @@ class PhylotreeApplication extends Component {
                 subtreeNewick: getSubtreeNewick(node),
                 rename: newName,
                 parent: node.parent.unique_id,
-                // isUpSubtree: node.unique_id === child1.unique_id,
                 siblingIndex: nodeIndex,
               };
               console.log(merged);
@@ -343,42 +342,42 @@ class PhylotreeApplication extends Component {
   };
 
   // 處理節點的折疊/展開
-  toggleNode(nodeId) {
-    this.setState(
-      (prevState) => {
-        const collapsedNodes = new Set(prevState.collapsedNodes);
-        const isCurrentlyCollapsed = collapsedNodes.has(nodeId);
+  // toggleNode(nodeId) {
+  //   this.setState(
+  //     (prevState) => {
+  //       const collapsedNodes = new Set(prevState.collapsedNodes);
+  //       const isCurrentlyCollapsed = collapsedNodes.has(nodeId);
 
-        if (isCurrentlyCollapsed) {
-          // 展開節點
-          collapsedNodes.delete(nodeId);
+  //       if (isCurrentlyCollapsed) {
+  //         // 展開節點
+  //         collapsedNodes.delete(nodeId);
+  //         const collapsedNodes = new Set(prevState.collapsedNodes);
+  //         console.log("我發現你是根本不會進來喔");
 
-          return { collapsedNodes };
-        } else {
-          // 折疊節點
-          collapsedNodes.add(nodeId);
+  //         return { collapsedNodes };
+  //       } else {
+  //         // 折疊節點
+  //         collapsedNodes.add(nodeId);
 
-          // 如果節點已被重命名，則更新樹並把當前狀態壓入堆疊
-          if (prevState.renamedNodes.has(nodeId)) {
-            // 先只更新折疊狀態，在回調中處理樹的更新
-            return { collapsedNodes };
-          }
+  //         // if (prevState.renamedNodes.has(nodeId)) {
+  //         //   return { collapsedNodes };
+  //         // }
 
-          return { collapsedNodes };
-        }
-      },
-      () => {
-        // 在折疊一個已重命名的節點時，更新樹並將當前狀態壓入堆疊
-        const nodeId = this.state.contextMenu.nodeId; // 獲取操作的節點 ID
-        if (
-          this.state.collapsedNodes.has(nodeId) &&
-          this.state.renamedNodes.has(nodeId)
-        ) {
-          this.updateTree();
-        }
-      }
-    );
-  }
+  //         return { collapsedNodes };
+  //       }
+  //     },
+  //     () => {
+  //       // 在折疊一個已重命名的節點時，更新樹並將當前狀態壓入堆疊
+  //       const nodeId = this.state.contextMenu.nodeId; // 獲取操作的節點 ID
+  //       if (
+  //         this.state.collapsedNodes.has(nodeId) &&
+  //         this.state.renamedNodes.has(nodeId)
+  //       ) {
+  //         // this.updateTree();
+  //       }
+  //     }
+  //   );
+  // }
 
   // 輔助方法：根據ID找節點
   findNodeById(rootNode, nodeId) {
@@ -402,18 +401,21 @@ class PhylotreeApplication extends Component {
     const { nodeId, isNodeCollapsed } = this.state.contextMenu;
 
     if (nodeId) {
-      if (isNodeCollapsed) {
-        // 如果節點已折疊，執行展開操作
-        this.setState((prevState) => {
-          const collapsedNodes = new Set(prevState.collapsedNodes);
+      // 如果節點已折疊，執行展開操作
+      this.setState((prevState) => {
+        const collapsedNodes = new Set(prevState.collapsedNodes);
+        if (isNodeCollapsed) {
+          // 展開節點
           collapsedNodes.delete(nodeId);
 
           return { collapsedNodes };
-        });
-      } else {
-        // 執行折疊操作
-        this.toggleNode(nodeId);
-      }
+        } else {
+          // 折疊節點
+          collapsedNodes.add(nodeId);
+
+          return { collapsedNodes };
+        }
+      });
     }
 
     this.closeContextMenu();

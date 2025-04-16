@@ -274,45 +274,6 @@ function placenodes(
       }
     }
 
-    // let currentThresholdGroups = new Map();
-
-    // // 收集所有要被分配threshold id的node
-    // tree.traverse_and_compute((node) => {
-    //   if (!tree.isLeafNode(node)) {
-    //     const threshold = node.data.abstract_x;
-
-    //     if (!currentThresholdGroups.has(threshold)) {
-    //       currentThresholdGroups.set(threshold, []);
-    //     }
-
-    //     currentThresholdGroups.get(threshold).push(node);
-    //   }
-    //   return true;
-    // });
-
-    // // console.log("currentThresholdGroups(before): ", currentThresholdGroups);
-
-    // // 為每個threshold組中的節點分配ID，保留原有ID模式
-    // for (const [threshold, nodes] of currentThresholdGroups.entries()) {
-    //   // 按y值排序
-    //   nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
-
-    //   // 獲取該threshold下的原有ID列表
-    //   var originalIds = tree.thresholdIdMap[threshold] || [];
-
-    //   // 跳過在mergedChildrenIds中的ID
-    //   const availableIds = originalIds.filter(
-    //     (id) => !mergedChildrenIds.has(id)
-    //   );
-
-    //   // 為節點分配ID，使用可用的原有ID
-    //   nodes.forEach((node, index) => {
-    //     if (index < availableIds.length) {
-    //       node.unique_id = String(availableIds[index]);
-    //     }
-    //   });
-    // }
-
     let currentThresholdGroups = assignThresholdIds(tree, mergedChildrenIds);
 
     // 提取 threshold 的辅助函数
@@ -357,83 +318,10 @@ function placenodes(
         if (nodeToModify) {
           // 將 merged 節點 isLeafNode 設為 false ，並重新賦予一次 threshold id
           setNodeAsNonLeaf(tree, nodeToModify);
-          // currentThresholdGroups = new Map();
           assignThresholdIds(tree, mergedChildrenIds);
-
-          // tree.traverse_and_compute((node) => {
-          //   if (!tree.isLeafNode(node)) {
-          //     const threshold = node.data.abstract_x;
-
-          //     if (!currentThresholdGroups.has(threshold)) {
-          //       currentThresholdGroups.set(threshold, []);
-          //     }
-
-          //     currentThresholdGroups.get(threshold).push(node);
-          //   }
-          //   return true;
-          // });
-
-          // // console.log("currentThresholdGroups: ", currentThresholdGroups);
-
-          // for (const [threshold, nodes] of currentThresholdGroups.entries()) {
-          //   // 按y值排序
-          //   nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
-
-          //   // 獲取該threshold下的原有ID列表
-          //   var originalIds = tree.thresholdIdMap[threshold] || [];
-
-          //   // 跳過在mergedChildrenIds中的ID
-          //   const availableIds = originalIds.filter(
-          //     (id) => !mergedChildrenIds.has(id)
-          //   );
-
-          //   // 為節點分配ID，使用可用的原有ID
-          //   nodes.forEach((node, index) => {
-          //     if (index < availableIds.length) {
-          //       node.unique_id = String(availableIds[index]);
-          //     }
-          //   });
-          // }
         }
       }
     }
-
-    // currentThresholdGroups = new Map();
-
-    // tree.traverse_and_compute((node) => {
-    //   if (!tree.isLeafNode(node)) {
-    //     const threshold = node.data.abstract_x;
-
-    //     if (!currentThresholdGroups.has(threshold)) {
-    //       currentThresholdGroups.set(threshold, []);
-    //     }
-
-    //     currentThresholdGroups.get(threshold).push(node);
-    //   }
-    //   return true;
-    // });
-
-    // console.log("currentThresholdGroups: ", currentThresholdGroups);
-
-    // for (const [threshold, nodes] of currentThresholdGroups.entries()) {
-    //   // 按y值排序
-    //   nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
-
-    //   // 獲取該threshold下的原有ID列表
-    //   var originalIds = tree.thresholdIdMap[threshold] || [];
-
-    //   // 跳過在mergedChildrenIds中的ID
-    //   const availableIds = originalIds.filter(
-    //     (id) => !mergedChildrenIds.has(id)
-    //   );
-
-    //   // 為節點分配ID，使用可用的原有ID
-    //   nodes.forEach((node, index) => {
-    //     if (index < availableIds.length) {
-    //       node.unique_id = String(availableIds[index]);
-    //     }
-    //   });
-    // }
   }
 
   // 輔助函數：通過ID查找節點
