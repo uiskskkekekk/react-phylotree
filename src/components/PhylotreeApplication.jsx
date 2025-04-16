@@ -635,7 +635,7 @@ class PhylotreeApplication extends Component {
                 <label>Width: {width}px</label>
                 <input
                   type="range"
-                  min="100"
+                  min="300"
                   max="2000"
                   value={width}
                   step="10"
@@ -649,7 +649,7 @@ class PhylotreeApplication extends Component {
                 <label>Height: {height}px</label>
                 <input
                   type="range"
-                  min="100"
+                  min="300"
                   max="2000"
                   value={height}
                   step="10"

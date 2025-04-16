@@ -57,6 +57,46 @@ function setNodeAsNonLeaf(tree, node) {
   // console.log("isLeafNode(after): ", tree.isLeafNode(node));
 }
 
+// 分配 threshold ID
+function assignThresholdIds(tree, mergedChildrenIds) {
+  let currentThresholdGroups = new Map();
+
+  // 收集所有要被分配 threshold id 的 node
+  tree.traverse_and_compute((node) => {
+    if (!tree.isLeafNode(node)) {
+      const threshold = node.data.abstract_x;
+
+      if (!currentThresholdGroups.has(threshold)) {
+        currentThresholdGroups.set(threshold, []);
+      }
+
+      currentThresholdGroups.get(threshold).push(node);
+    }
+    return true;
+  });
+
+  // 為每個 threshold 組中的節點分配 ID，保留原有 ID 模式
+  for (const [threshold, nodes] of currentThresholdGroups.entries()) {
+    // 按 y 值排序
+    nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
+
+    // 獲取該 threshold 下的原有 ID 列表
+    var originalIds = tree.thresholdIdMap[threshold] || [];
+
+    // 跳過在 mergedChildrenIds 中的 ID
+    const availableIds = originalIds.filter((id) => !mergedChildrenIds.has(id));
+
+    // 為節點分配 ID，使用可用的原有 ID
+    nodes.forEach((node, index) => {
+      if (index < availableIds.length) {
+        node.unique_id = String(availableIds[index]);
+      }
+    });
+  }
+
+  return currentThresholdGroups;
+}
+
 let persistentThresholdIdMap = {};
 
 function placenodes(
@@ -234,44 +274,46 @@ function placenodes(
       }
     }
 
-    let currentThresholdGroups = new Map();
+    // let currentThresholdGroups = new Map();
 
-    // 收集所有要被分配threshold id的node
-    tree.traverse_and_compute((node) => {
-      if (!tree.isLeafNode(node)) {
-        const threshold = node.data.abstract_x;
+    // // 收集所有要被分配threshold id的node
+    // tree.traverse_and_compute((node) => {
+    //   if (!tree.isLeafNode(node)) {
+    //     const threshold = node.data.abstract_x;
 
-        if (!currentThresholdGroups.has(threshold)) {
-          currentThresholdGroups.set(threshold, []);
-        }
+    //     if (!currentThresholdGroups.has(threshold)) {
+    //       currentThresholdGroups.set(threshold, []);
+    //     }
 
-        currentThresholdGroups.get(threshold).push(node);
-      }
-      return true;
-    });
+    //     currentThresholdGroups.get(threshold).push(node);
+    //   }
+    //   return true;
+    // });
 
-    // console.log("currentThresholdGroups(before): ", currentThresholdGroups);
+    // // console.log("currentThresholdGroups(before): ", currentThresholdGroups);
 
-    // 為每個threshold組中的節點分配ID，保留原有ID模式
-    for (const [threshold, nodes] of currentThresholdGroups.entries()) {
-      // 按y值排序
-      nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
+    // // 為每個threshold組中的節點分配ID，保留原有ID模式
+    // for (const [threshold, nodes] of currentThresholdGroups.entries()) {
+    //   // 按y值排序
+    //   nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
 
-      // 獲取該threshold下的原有ID列表
-      var originalIds = tree.thresholdIdMap[threshold] || [];
+    //   // 獲取該threshold下的原有ID列表
+    //   var originalIds = tree.thresholdIdMap[threshold] || [];
 
-      // 跳過在mergedChildrenIds中的ID
-      const availableIds = originalIds.filter(
-        (id) => !mergedChildrenIds.has(id)
-      );
+    //   // 跳過在mergedChildrenIds中的ID
+    //   const availableIds = originalIds.filter(
+    //     (id) => !mergedChildrenIds.has(id)
+    //   );
 
-      // 為節點分配ID，使用可用的原有ID
-      nodes.forEach((node, index) => {
-        if (index < availableIds.length) {
-          node.unique_id = String(availableIds[index]);
-        }
-      });
-    }
+    //   // 為節點分配ID，使用可用的原有ID
+    //   nodes.forEach((node, index) => {
+    //     if (index < availableIds.length) {
+    //       node.unique_id = String(availableIds[index]);
+    //     }
+    //   });
+    // }
+
+    let currentThresholdGroups = assignThresholdIds(tree, mergedChildrenIds);
 
     // 提取 threshold 的辅助函数
     const extractThreshold = (id) => {
@@ -315,42 +357,43 @@ function placenodes(
         if (nodeToModify) {
           // 將 merged 節點 isLeafNode 設為 false ，並重新賦予一次 threshold id
           setNodeAsNonLeaf(tree, nodeToModify);
-          currentThresholdGroups = new Map();
+          // currentThresholdGroups = new Map();
+          assignThresholdIds(tree, mergedChildrenIds);
 
-          tree.traverse_and_compute((node) => {
-            if (!tree.isLeafNode(node)) {
-              const threshold = node.data.abstract_x;
+          // tree.traverse_and_compute((node) => {
+          //   if (!tree.isLeafNode(node)) {
+          //     const threshold = node.data.abstract_x;
 
-              if (!currentThresholdGroups.has(threshold)) {
-                currentThresholdGroups.set(threshold, []);
-              }
+          //     if (!currentThresholdGroups.has(threshold)) {
+          //       currentThresholdGroups.set(threshold, []);
+          //     }
 
-              currentThresholdGroups.get(threshold).push(node);
-            }
-            return true;
-          });
+          //     currentThresholdGroups.get(threshold).push(node);
+          //   }
+          //   return true;
+          // });
 
-          // console.log("currentThresholdGroups: ", currentThresholdGroups);
+          // // console.log("currentThresholdGroups: ", currentThresholdGroups);
 
-          for (const [threshold, nodes] of currentThresholdGroups.entries()) {
-            // 按y值排序
-            nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
+          // for (const [threshold, nodes] of currentThresholdGroups.entries()) {
+          //   // 按y值排序
+          //   nodes.sort((a, b) => a.data.abstract_y - b.data.abstract_y);
 
-            // 獲取該threshold下的原有ID列表
-            var originalIds = tree.thresholdIdMap[threshold] || [];
+          //   // 獲取該threshold下的原有ID列表
+          //   var originalIds = tree.thresholdIdMap[threshold] || [];
 
-            // 跳過在mergedChildrenIds中的ID
-            const availableIds = originalIds.filter(
-              (id) => !mergedChildrenIds.has(id)
-            );
+          //   // 跳過在mergedChildrenIds中的ID
+          //   const availableIds = originalIds.filter(
+          //     (id) => !mergedChildrenIds.has(id)
+          //   );
 
-            // 為節點分配ID，使用可用的原有ID
-            nodes.forEach((node, index) => {
-              if (index < availableIds.length) {
-                node.unique_id = String(availableIds[index]);
-              }
-            });
-          }
+          //   // 為節點分配ID，使用可用的原有ID
+          //   nodes.forEach((node, index) => {
+          //     if (index < availableIds.length) {
+          //       node.unique_id = String(availableIds[index]);
+          //     }
+          //   });
+          // }
         }
       }
     }
@@ -466,8 +509,8 @@ function calculateOptimalDimensions(tree) {
     maxPathLength * minHorizontalSpacing + maxLabelWidth + 100;
 
   return {
-    width: Math.round(optimalWidth),
-    height: Math.round(optimalHeight),
+    width: Math.max(300, Math.round(optimalWidth)),
+    height: Math.max(300, Math.round(optimalHeight)),
   };
 }
 
