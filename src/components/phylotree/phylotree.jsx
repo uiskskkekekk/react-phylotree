@@ -558,15 +558,31 @@ function Phylotree(props) {
         />
       )}
 
+      {(() => {
+        // 在渲染前檢查是否有重複的鍵值
+        const keyMap = new Map();
+        tree.links.forEach((link) => {
+          const key = `${link.source.unique_id},${link.target.unique_id}`;
+          if (keyMap.has(key)) {
+            console.log("找到重複的鍵值:", key, link);
+          } else {
+            keyMap.set(key, link);
+          }
+        });
+        return null; // 這個立即執行函數不需要渲染任何內容
+      })()}
+
       {tree.links
         .filter((link) => !hiddenBranches.has(link.target.unique_id))
         .map((link, index) => (
           <Branch
-            key={
-              link.source.unique_id && link.target.unique_id
-                ? `${link.source.unique_id},${link.target.unique_id}`
-                : `branch-${index}`
-            }
+            // key={
+            //   link.source.unique_id && link.target.unique_id
+            //     ? `${link.source.unique_id},${link.target.unique_id}`
+            //     : `branch-${index}`
+            // }
+            key={`${link.source.unique_id},${link.target.unique_id}-${index}`}
+            // key={`${link.source.unique_id},${link.target.unique_id}`}
             xScale={x_scale}
             yScale={y_scale}
             colorScale={color_scale}

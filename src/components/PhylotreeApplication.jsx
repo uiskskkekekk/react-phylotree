@@ -16,7 +16,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 
 import ContextMenu from "./phylotree/ContextMenu.jsx"; // 導入 ContextMenu 組件
-import Phylotree, { placenodes } from "./phylotree/phylotree.jsx";
+import Phylotree from "./phylotree/phylotree.jsx";
 
 import "../styles/phylotree.css";
 
@@ -418,11 +418,13 @@ class PhylotreeApplication extends Component {
   }
 
   replaceNodeWithSubtree(tree, leafNodeId, newNewick) {
+    console.log("開始替換節點，ID:", leafNodeId, "新Newick:", newNewick);
     // 找到要替換的葉節點
     let targetNode = null;
     tree.traverse_and_compute((node) => {
       if (node.unique_id === leafNodeId) {
         targetNode = node;
+        console.log("找到目標節點:", targetNode);
         return false;
       }
       return true;
@@ -459,7 +461,7 @@ class PhylotreeApplication extends Component {
     parentNode.children[indexInParent] = subtreeRoot;
 
     // 重新計算樹的布局
-    placenodes(tree, tree.internalNodeLabels, null, tree.sort);
+    // placenodes(tree, tree.internalNodeLabels, null, tree.sort);
 
     // 轉換回完整的 Newick 字串
     const updatedNewick = this.convertTreeToNewick(
@@ -467,6 +469,8 @@ class PhylotreeApplication extends Component {
       new Set(),
       new Map()
     );
+
+    console.log("updateNewick: ", updatedNewick);
 
     return updatedNewick;
   }
