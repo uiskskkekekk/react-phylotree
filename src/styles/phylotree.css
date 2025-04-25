@@ -36,6 +36,7 @@ path.rp-branch:hover {
   border: 1px solid #767676;
   background-color: #EFEFEF;
   cursor: pointer;
+  margin-left: 15px;
 }
 
 .file-input-container button:hover{
